@@ -84,7 +84,7 @@ servers:
       #     mode: active
 
       - endpoint_ports: [ VPCS_Access ]
-        switch_ports: [ Ethernet5, Ethernet5 ]
+        switch_ports: [ Ethernet5 ]
         switches: [ dc2-leaf3a ]
         vlans: 11
         mode: access
