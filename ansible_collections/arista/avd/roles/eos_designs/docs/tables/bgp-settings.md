@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2024 Arista Networks, Inc.
+  ~ Copyright (c) 2025 Arista Networks, Inc.
   ~ Use of this source code is governed by the Apache License 2.0
   ~ that can be found in the LICENSE file.
   -->
@@ -13,17 +13,22 @@
     | [<samp>&nbsp;&nbsp;external_routes</samp>](## "bgp_distance.external_routes") | Integer | Required |  | Min: 1<br>Max: 255 |  |
     | [<samp>&nbsp;&nbsp;internal_routes</samp>](## "bgp_distance.internal_routes") | Integer | Required |  | Min: 1<br>Max: 255 |  |
     | [<samp>&nbsp;&nbsp;local_routes</samp>](## "bgp_distance.local_routes") | Integer | Required |  | Min: 1<br>Max: 255 |  |
-    | [<samp>bgp_ecmp</samp>](## "bgp_ecmp") | Integer |  |  |  | Maximum ECMP for BGP multi-path.<br>The default value is 4 except for WAN Routers where the default value is unset (falls back to EOS default). |
+    | [<samp>bgp_ecmp</samp>](## "bgp_ecmp") | Integer |  |  | Min: 1<br>Max: 600 | Maximum ECMP for BGP multi-path.<br>The default value is 4 except for WAN Routers where the default value is unset (falls back to EOS default). |
     | [<samp>bgp_graceful_restart</samp>](## "bgp_graceful_restart") | Dictionary |  |  |  | BGP graceful-restart allows a BGP speaker with separate control plane and data plane processing to continue forwarding traffic during a BGP restart.<br>Its neighbors (receiving speakers) may retain routing information from the restarting speaker while a BGP session with it is being re-established, reducing route flapping.<br> |
     | [<samp>&nbsp;&nbsp;enabled</samp>](## "bgp_graceful_restart.enabled") | Boolean | Required | `False` |  | Enable or disable graceful-restart for all BGP peers. |
     | [<samp>&nbsp;&nbsp;restart_time</samp>](## "bgp_graceful_restart.restart_time") | Integer |  | `300` | Min: 1<br>Max: 3600 | Restart time in seconds. |
-    | [<samp>bgp_maximum_paths</samp>](## "bgp_maximum_paths") | Integer |  |  | Min: 1<br>Max: 512 | Maximum Paths for BGP multi-path.<br>The default value is 4 except for WAN Routers where the default value is 16. |
+    | [<samp>bgp_maximum_paths</samp>](## "bgp_maximum_paths") | Integer |  |  | Min: 1<br>Max: 600 | Maximum Paths for BGP multi-path.<br>The default value is 4 except for WAN Routers where the default value is 16. |
     | [<samp>bgp_peer_groups</samp>](## "bgp_peer_groups") | Dictionary |  |  |  | Leverage an Arista EOS switch to generate the encrypted password using the correct peer group name.<br>Note that the name of the peer groups use '-' instead of '_' in EOS configuration.<br> |
     | [<samp>&nbsp;&nbsp;ipv4_underlay_peers</samp>](## "bgp_peer_groups.ipv4_underlay_peers") | Dictionary |  |  |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;name</samp>](## "bgp_peer_groups.ipv4_underlay_peers.name") | String |  | `IPv4-UNDERLAY-PEERS` |  | Name of peer group. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;password</samp>](## "bgp_peer_groups.ipv4_underlay_peers.password") | String |  |  |  | Type 7 encrypted password. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;bfd</samp>](## "bgp_peer_groups.ipv4_underlay_peers.bfd") | Boolean |  | `False` |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;structured_config</samp>](## "bgp_peer_groups.ipv4_underlay_peers.structured_config") | Dictionary |  |  |  | Custom structured config added under router_bgp.peer_groups.[name=<name>] for eos_cli_config_gen. |
+    | [<samp>&nbsp;&nbsp;mlag_ipv4_vrfs_peer</samp>](## "bgp_peer_groups.mlag_ipv4_vrfs_peer") | Dictionary |  |  |  | Set this peer group name to use a different peer-group for MLAG peerings in VRFs.<br>By default AVD uses the `mlag_ipv4_underlay_peer` peer group for the Underlay and for all the VRFs.<br><br>If `mlag_ipv4_vrfs_peer.name` and `mlag_ipv4_underlay_peer.name` are the same,<br>then all the attributes set here are ignored. |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;name</samp>](## "bgp_peer_groups.mlag_ipv4_vrfs_peer.name") | String | Required |  |  | Name of peer group. |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;password</samp>](## "bgp_peer_groups.mlag_ipv4_vrfs_peer.password") | String |  |  |  | Type 7 encrypted password. |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;bfd</samp>](## "bgp_peer_groups.mlag_ipv4_vrfs_peer.bfd") | Boolean |  | `False` |  |  |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;structured_config</samp>](## "bgp_peer_groups.mlag_ipv4_vrfs_peer.structured_config") | Dictionary |  |  |  | Custom structured config added under router_bgp.peer_groups.[name=<name>] for eos_cli_config_gen. |
     | [<samp>&nbsp;&nbsp;mlag_ipv4_underlay_peer</samp>](## "bgp_peer_groups.mlag_ipv4_underlay_peer") | Dictionary |  |  |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;name</samp>](## "bgp_peer_groups.mlag_ipv4_underlay_peer.name") | String |  | `MLAG-IPv4-UNDERLAY-PEER` |  | Name of peer group. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;password</samp>](## "bgp_peer_groups.mlag_ipv4_underlay_peer.password") | String |  |  |  | Type 7 encrypted password. |
@@ -56,7 +61,7 @@
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;structured_config</samp>](## "bgp_peer_groups.ipvpn_gateway_peers.structured_config") | Dictionary |  |  |  | Custom structured config added under router_bgp.peer_groups.[name=<name>] for eos_cli_config_gen. |
     | [<samp>&nbsp;&nbsp;wan_overlay_peers</samp>](## "bgp_peer_groups.wan_overlay_peers") | Dictionary |  |  |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;name</samp>](## "bgp_peer_groups.wan_overlay_peers.name") | String |  | `WAN-OVERLAY-PEERS` |  | Name of peer group. |
-    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;password</samp>](## "bgp_peer_groups.wan_overlay_peers.password") | String |  |  |  | Type 7 encrypted password. |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;password</samp>](## "bgp_peer_groups.wan_overlay_peers.password") | String |  |  |  | Type 7 encrypted password.<br>When configuring a password on the `wan_overlay_peers` BGP peer group,<br>it may also be required to set a password for the `wan_rr_overlay_peers` BGP peer group.<br>This is required in the case where one or more pathfinders use the same VTEP IP range as the edge routers.<br>If the password is not set, the static BGP peerings between Pathfinders may not come up. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;bfd</samp>](## "bgp_peer_groups.wan_overlay_peers.bfd") | Boolean |  | `True` |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;bfd_timers</samp>](## "bgp_peer_groups.wan_overlay_peers.bfd_timers") | Dictionary |  |  |  | Specify the BFD timers to override the default values.<br>It is recommended to keep BFD total timeout longer than the DPS timeout.<br>The Default BFD timeout is 10 x 1 seconds and the default DPS timeout is 5 x 1 seconds. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;interval</samp>](## "bgp_peer_groups.wan_overlay_peers.bfd_timers.interval") | Integer | Required | `1000` | Min: 50<br>Max: 60000 | Interval in milliseconds. |
@@ -68,7 +73,7 @@
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;structured_config</samp>](## "bgp_peer_groups.wan_overlay_peers.structured_config") | Dictionary |  |  |  | Custom structured config added under router_bgp.peer_groups.[name=<name>] for eos_cli_config_gen. |
     | [<samp>&nbsp;&nbsp;wan_rr_overlay_peers</samp>](## "bgp_peer_groups.wan_rr_overlay_peers") | Dictionary |  |  |  | Configuration options for the peer-group created to peer between AutoVPN RRs or CV Pathfinders. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;name</samp>](## "bgp_peer_groups.wan_rr_overlay_peers.name") | String |  | `WAN-RR-OVERLAY-PEERS` |  | Name of peer group. |
-    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;password</samp>](## "bgp_peer_groups.wan_rr_overlay_peers.password") | String |  |  |  | Type 7 encrypted password. |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;password</samp>](## "bgp_peer_groups.wan_rr_overlay_peers.password") | String |  |  |  | Type 7 encrypted password.<br>When configuring a password on the `wan_overlay_peers` BGP peer group,<br>it may also be required to set a password for the `wan_rr_overlay_peers` BGP peer group.<br>This is required in the case where one or more pathfinders use the same VTEP IP range as the edge routers.<br>If the password is not set, the static BGP peerings between Pathfinders may not come up. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;bfd</samp>](## "bgp_peer_groups.wan_rr_overlay_peers.bfd") | Boolean |  | `True` |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;bfd_timers</samp>](## "bgp_peer_groups.wan_rr_overlay_peers.bfd_timers") | Dictionary |  |  |  | Specify the BFD timers to override the default values.<br>It is recommended to keep BFD total timeout longer than the DPS timeout.<br>The Default BFD timeout is 10 x 1 seconds and the default DPS timeout is 5 x 1 seconds. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;interval</samp>](## "bgp_peer_groups.wan_rr_overlay_peers.bfd_timers.interval") | Integer | Required | `1000` | Min: 50<br>Max: 60000 | Interval in milliseconds. |
@@ -76,11 +81,8 @@
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;multiplier</samp>](## "bgp_peer_groups.wan_rr_overlay_peers.bfd_timers.multiplier") | Integer | Required | `10` | Min: 3<br>Max: 50 |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;ttl_maximum_hops</samp>](## "bgp_peer_groups.wan_rr_overlay_peers.ttl_maximum_hops") | Integer |  | `1` |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;structured_config</samp>](## "bgp_peer_groups.wan_rr_overlay_peers.structured_config") | Dictionary |  |  |  | Custom structured config added under router_bgp.peer_groups.[name=<name>] for eos_cli_config_gen. |
-    | [<samp>&nbsp;&nbsp;IPv4_UNDERLAY_PEERS</samp>](## "bgp_peer_groups.IPv4_UNDERLAY_PEERS") <span style="color:red">removed</span> | Dictionary |  |  |  | <span style="color:red">This key was removed. Support was removed in AVD version 4.0.0. Use <samp>bgp_peer_groups.ipv4_underlay_peers</samp> instead.</span> |
-    | [<samp>&nbsp;&nbsp;MLAG_IPv4_UNDERLAY_PEER</samp>](## "bgp_peer_groups.MLAG_IPv4_UNDERLAY_PEER") <span style="color:red">removed</span> | Dictionary |  |  |  | <span style="color:red">This key was removed. Support was removed in AVD version 4.0.0. Use <samp>bgp_peer_groups.mlag_ipv4_underlay_peer</samp> instead.</span> |
-    | [<samp>&nbsp;&nbsp;EVPN_OVERLAY_PEERS</samp>](## "bgp_peer_groups.EVPN_OVERLAY_PEERS") <span style="color:red">removed</span> | Dictionary |  |  |  | <span style="color:red">This key was removed. Support was removed in AVD version 4.0.0. Use <samp>bgp_peer_groups.evpn_overlay_peers</samp> instead.</span> |
-    | [<samp>bgp_update_wait_install</samp>](## "bgp_update_wait_install") | Boolean |  |  |  | Do not advertise reachability to a prefix until that prefix has been installed in hardware.<br>This will eliminate any temporary black holes due to a BGP speaker advertising reachability to a prefix that may not yet be installed into the forwarding plane.<br> |
-    | [<samp>bgp_update_wait_for_convergence</samp>](## "bgp_update_wait_for_convergence") | Boolean |  |  |  | Disables FIB updates and route advertisement when the BGP instance is initiated until the BGP convergence state is reached.<br> |
+    | [<samp>bgp_update_wait_install</samp>](## "bgp_update_wait_install") | Boolean |  | `True` |  | Do not advertise reachability to a prefix until that prefix has been installed in hardware.<br>This will eliminate any temporary black holes due to a BGP speaker advertising reachability to a prefix that may not yet be installed into the forwarding plane.<br> |
+    | [<samp>bgp_update_wait_for_convergence</samp>](## "bgp_update_wait_for_convergence") | Boolean |  | `False` |  | Disables FIB updates and route advertisement when the BGP instance is initiated until the BGP convergence state is reached.<br> |
 
 === "YAML"
 
@@ -99,7 +101,7 @@
 
     # Maximum ECMP for BGP multi-path.
     # The default value is 4 except for WAN Routers where the default value is unset (falls back to EOS default).
-    bgp_ecmp: <int>
+    bgp_ecmp: <int; 1-600>
 
     # BGP graceful-restart allows a BGP speaker with separate control plane and data plane processing to continue forwarding traffic during a BGP restart.
     # Its neighbors (receiving speakers) may retain routing information from the restarting speaker while a BGP session with it is being re-established, reducing route flapping.
@@ -113,7 +115,7 @@
 
     # Maximum Paths for BGP multi-path.
     # The default value is 4 except for WAN Routers where the default value is 16.
-    bgp_maximum_paths: <int; 1-512>
+    bgp_maximum_paths: <int; 1-600>
 
     # Leverage an Arista EOS switch to generate the encrypted password using the correct peer group name.
     # Note that the name of the peer groups use '-' instead of '_' in EOS configuration.
@@ -122,6 +124,23 @@
 
         # Name of peer group.
         name: <str; default="IPv4-UNDERLAY-PEERS">
+
+        # Type 7 encrypted password.
+        password: <str>
+        bfd: <bool; default=False>
+
+        # Custom structured config added under router_bgp.peer_groups.[name=<name>] for eos_cli_config_gen.
+        structured_config: <dict>
+
+      # Set this peer group name to use a different peer-group for MLAG peerings in VRFs.
+      # By default AVD uses the `mlag_ipv4_underlay_peer` peer group for the Underlay and for all the VRFs.
+      #
+      # If `mlag_ipv4_vrfs_peer.name` and `mlag_ipv4_underlay_peer.name` are the same,
+      # then all the attributes set here are ignored.
+      mlag_ipv4_vrfs_peer:
+
+        # Name of peer group.
+        name: <str; required>
 
         # Type 7 encrypted password.
         password: <str>
@@ -201,6 +220,10 @@
         name: <str; default="WAN-OVERLAY-PEERS">
 
         # Type 7 encrypted password.
+        # When configuring a password on the `wan_overlay_peers` BGP peer group,
+        # it may also be required to set a password for the `wan_rr_overlay_peers` BGP peer group.
+        # This is required in the case where one or more pathfinders use the same VTEP IP range as the edge routers.
+        # If the password is not set, the static BGP peerings between Pathfinders may not come up.
         password: <str>
         bfd: <bool; default=True>
 
@@ -234,6 +257,10 @@
         name: <str; default="WAN-RR-OVERLAY-PEERS">
 
         # Type 7 encrypted password.
+        # When configuring a password on the `wan_overlay_peers` BGP peer group,
+        # it may also be required to set a password for the `wan_rr_overlay_peers` BGP peer group.
+        # This is required in the case where one or more pathfinders use the same VTEP IP range as the edge routers.
+        # If the password is not set, the static BGP peerings between Pathfinders may not come up.
         password: <str>
         bfd: <bool; default=True>
 
@@ -255,8 +282,8 @@
 
     # Do not advertise reachability to a prefix until that prefix has been installed in hardware.
     # This will eliminate any temporary black holes due to a BGP speaker advertising reachability to a prefix that may not yet be installed into the forwarding plane.
-    bgp_update_wait_install: <bool>
+    bgp_update_wait_install: <bool; default=True>
 
     # Disables FIB updates and route advertisement when the BGP instance is initiated until the BGP convergence state is reached.
-    bgp_update_wait_for_convergence: <bool>
+    bgp_update_wait_for_convergence: <bool; default=False>
     ```

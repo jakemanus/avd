@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2024 Arista Networks, Inc.
+  ~ Copyright (c) 2025 Arista Networks, Inc.
   ~ Use of this source code is governed by the Apache License 2.0
   ~ that can be found in the LICENSE file.
   -->
@@ -8,12 +8,14 @@
     | Variable | Type | Required | Default | Value Restrictions | Description |
     | -------- | ---- | -------- | ------- | ------------------ | ----------- |
     | [<samp>management_security</samp>](## "management_security") | Dictionary |  |  |  |  |
-    | [<samp>&nbsp;&nbsp;entropy_source</samp>](## "management_security.entropy_source") <span style="color:red">deprecated</span> | String |  |  |  | <span style="color:red">This key is deprecated. Support will be removed in AVD version v5.0.0. Use <samp>entropy_sources</samp> instead.</span> |
     | [<samp>&nbsp;&nbsp;entropy_sources</samp>](## "management_security.entropy_sources") | Dictionary |  |  |  | Source of entropy. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;hardware</samp>](## "management_security.entropy_sources.hardware") | Boolean |  |  |  | Use a hardware based source. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;haveged</samp>](## "management_security.entropy_sources.haveged") | Boolean |  |  |  | Use the HAVEGE algorithm. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;cpu_jitter</samp>](## "management_security.entropy_sources.cpu_jitter") | Boolean |  |  |  | Use the Jitter RNG algorithm of a CPU based source. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;hardware_exclusive</samp>](## "management_security.entropy_sources.hardware_exclusive") | Boolean |  |  |  | Only use entropy from the hardware source. |
+    | [<samp>&nbsp;&nbsp;signature_verification</samp>](## "management_security.signature_verification") | Dictionary |  |  |  | Verify the SWIX signatures. |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;enabled</samp>](## "management_security.signature_verification.enabled") | Boolean | Required |  |  |  |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;ssl_profile</samp>](## "management_security.signature_verification.ssl_profile") | String |  |  |  |  |
     | [<samp>&nbsp;&nbsp;password</samp>](## "management_security.password") | Dictionary |  |  |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;minimum_length</samp>](## "management_security.password.minimum_length") | Integer |  |  | Min: 1<br>Max: 32 |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;encryption_key_common</samp>](## "management_security.password.encryption_key_common") | Boolean |  |  |  |  |
@@ -31,8 +33,12 @@
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sequential</samp>](## "management_security.password.policies.[].maximum.sequential") | Integer |  |  | Min: 1<br>Max: 65535 |  |
     | [<samp>&nbsp;&nbsp;ssl_profiles</samp>](## "management_security.ssl_profiles") | List, items: Dictionary |  |  |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;name</samp>](## "management_security.ssl_profiles.[].name") | String |  |  |  |  |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fips_restrictions</samp>](## "management_security.ssl_profiles.[].fips_restrictions") | Boolean |  |  |  | Use FIPS compliant algorithms. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tls_versions</samp>](## "management_security.ssl_profiles.[].tls_versions") | String |  |  |  | List of allowed TLS versions as string.<br>Examples:<br>  - "1.0"<br>  - "1.0 1.1"<br> |
-    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cipher_list</samp>](## "management_security.ssl_profiles.[].cipher_list") | String |  |  |  | cipher_list syntax follows the openssl cipher strings format.<br>Colon (:) separated list of allowed ciphers as a string.<br> |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cipher_list</samp>](## "management_security.ssl_profiles.[].cipher_list") | String |  |  |  | cipher_list syntax follows the openssl cipher strings format.<br>Colon (:) separated list of allowed ciphers as a string.<br>Not supported on EOS version starting 4.32.0F, use the `ciphers` setting instead.<br> |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ciphers</samp>](## "management_security.ssl_profiles.[].ciphers") | Dictionary |  |  |  | This setting is applicable to EOS versions 4.32.0F and later. |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;v1_0</samp>](## "management_security.ssl_profiles.[].ciphers.v1_0") | String |  |  |  | The cipher suites for TLS version 1.0, 1.1 and 1.2.<br>Colon (:) separated list of allowed ciphers as a string.<br> |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;v1_3</samp>](## "management_security.ssl_profiles.[].ciphers.v1_3") | String |  |  |  | The cipher suites for TLS version 1.3.<br>Colon (:) separated list of allowed ciphers as a string.<br> |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;trust_certificate</samp>](## "management_security.ssl_profiles.[].trust_certificate") | Dictionary |  |  |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;certificates</samp>](## "management_security.ssl_profiles.[].trust_certificate.certificates") | List, items: String |  |  |  | List of trust certificate names.<br>Examples:<br>  - test1.crt<br>  - test2.crt<br> |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&nbsp;&lt;str&gt;</samp>](## "management_security.ssl_profiles.[].trust_certificate.certificates.[]") | String |  |  |  |  |
@@ -67,15 +73,12 @@
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;start_date_time</samp>](## "management_security.shared_secret_profiles.[].secrets.[].transmit_lifetime.start_date_time") | String |  |  |  | Start date and time of lifetime of the secret. End date should be greater than start date.<br>Formats supported:<br>1. mm/dd/yyyy hh:mm:ss<br>2. yyyy-mm-dd hh:mm:ss<br>e.g 2024-12-20 10:00:00 |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;end_date_time</samp>](## "management_security.shared_secret_profiles.[].secrets.[].transmit_lifetime.end_date_time") | String |  |  |  | End date and time of lifetime of the secret. End date should be greater than start date.<br>Formats supported:<br>1. mm/dd/yyyy hh:mm:ss<br>2. yyyy-mm-dd hh:mm:ss<br>e.g 2024-12-20 10:00:00 |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;local_time</samp>](## "management_security.shared_secret_profiles.[].secrets.[].local_time") | Boolean |  |  |  | Configuring secret using the local timezone from system clock. Default is UTC. |
+    | [<samp>&nbsp;&nbsp;entropy_source</samp>](## "management_security.entropy_source") <span style="color:red">removed</span> | String |  |  |  | <span style="color:red">This key was removed. Support was removed in AVD version v5.0.0. Use <samp>entropy_sources</samp> instead.</span> |
 
 === "YAML"
 
     ```yaml
     management_security:
-      # This key is deprecated.
-      # Support will be removed in AVD version v5.0.0.
-      # Use <samp>entropy_sources</samp> instead.
-      entropy_source: <str>
 
       # Source of entropy.
       entropy_sources:
@@ -91,6 +94,11 @@
 
         # Only use entropy from the hardware source.
         hardware_exclusive: <bool>
+
+      # Verify the SWIX signatures.
+      signature_verification:
+        enabled: <bool; required>
+        ssl_profile: <str>
       password:
         minimum_length: <int; 1-32>
         encryption_key_common: <bool>
@@ -109,6 +117,9 @@
       ssl_profiles:
         - name: <str>
 
+          # Use FIPS compliant algorithms.
+          fips_restrictions: <bool>
+
           # List of allowed TLS versions as string.
           # Examples:
           #   - "1.0"
@@ -117,7 +128,19 @@
 
           # cipher_list syntax follows the openssl cipher strings format.
           # Colon (:) separated list of allowed ciphers as a string.
+          # Not supported on EOS version starting 4.32.0F, use the `ciphers` setting instead.
           cipher_list: <str>
+
+          # This setting is applicable to EOS versions 4.32.0F and later.
+          ciphers:
+
+            # The cipher suites for TLS version 1.0, 1.1 and 1.2.
+            # Colon (:) separated list of allowed ciphers as a string.
+            v1_0: <str>
+
+            # The cipher suites for TLS version 1.3.
+            # Colon (:) separated list of allowed ciphers as a string.
+            v1_3: <str>
           trust_certificate:
 
             # List of trust certificate names.

@@ -7,6 +7,7 @@
   - [Management API HTTP](#management-api-http)
 - [Authentication](#authentication)
   - [Local Users](#local-users)
+  - [Enable Password](#enable-password)
 - [Management Security](#management-security)
   - [Management Security Summary](#management-security-summary)
   - [Management Security Device Configuration](#management-security-device-configuration)
@@ -33,6 +34,7 @@
 - [MPLS](#mpls)
   - [MPLS and LDP](#mpls-and-ldp)
   - [MPLS Interfaces](#mpls-interfaces)
+  - [MPLS Device Configuration](#mpls-device-configuration)
 - [Multicast](#multicast)
   - [IP IGMP Snooping](#ip-igmp-snooping)
 - [VRF Instances](#vrf-instances)
@@ -49,20 +51,20 @@
 
 | Management Interface | Description | Type | VRF | IP Address | Gateway |
 | -------------------- | ----------- | ---- | --- | ---------- | ------- |
-| Management1 | oob_management | oob | MGMT | 172.16.1.101/24 | 172.16.1.1 |
+| Management1 | OOB_MANAGEMENT | oob | MGMT | 172.16.1.101/24 | 172.16.1.1 |
 
 ##### IPv6
 
 | Management Interface | Description | Type | VRF | IPv6 Address | IPv6 Gateway |
 | -------------------- | ----------- | ---- | --- | ------------ | ------------ |
-| Management1 | oob_management | oob | MGMT | - | - |
+| Management1 | OOB_MANAGEMENT | oob | MGMT | - | - |
 
 #### Management Interfaces Device Configuration
 
 ```eos
 !
 interface Management1
-   description oob_management
+   description OOB_MANAGEMENT
    no shutdown
    vrf MGMT
    ip address 172.16.1.101/24
@@ -72,9 +74,9 @@ interface Management1
 
 #### Management API HTTP Summary
 
-| HTTP | HTTPS | Default Services |
-| ---- | ----- | ---------------- |
-| False | True | - |
+| HTTP | HTTPS | UNIX-Socket | Default Services |
+| ---- | ----- | ----------- | ---------------- |
+| False | True | - | - |
 
 #### Management API VRF Access
 
@@ -103,15 +105,19 @@ management api http-commands
 | User | Privilege | Role | Disabled | Shell |
 | ---- | --------- | ---- | -------- | ----- |
 | admin | 15 | network-admin | False | - |
-| ansible | 15 | network-admin | False | - |
+| arista | 15 | network-admin | False | - |
 
 #### Local Users Device Configuration
 
 ```eos
 !
 username admin privilege 15 role network-admin nopassword
-username ansible privilege 15 role network-admin secret sha512 <removed>
+username arista privilege 15 role network-admin secret sha512 <removed>
 ```
+
+### Enable Password
+
+Enable password has been disabled
 
 ## Management Security
 
@@ -172,24 +178,24 @@ vlan internal order ascending range 1006 1199
 
 ##### Encapsulation Dot1q Interfaces
 
-| Interface | Description | Type | Vlan ID | Dot1q VLAN Tag |
-| --------- | ----------- | -----| ------- | -------------- |
-| Ethernet3.10 | C1_L3_SERVICE | l3dot1q | - | 10 |
-| Ethernet3.20 | C2_L3_SERVICE | l3dot1q | - | 20 |
+| Interface | Description | Vlan ID | Dot1q VLAN Tag | Dot1q Inner VLAN Tag |
+| --------- | ----------- | ------- | -------------- | -------------------- |
+| Ethernet3.10 | C1_L3_SERVICE | - | 10 | - |
+| Ethernet3.20 | C2_L3_SERVICE | - | 20 | - |
 
 ##### IPv4
 
-| Interface | Description | Type | Channel Group | IP Address | VRF |  MTU | Shutdown | ACL In | ACL Out |
-| --------- | ----------- | -----| ------------- | ---------- | ----| ---- | -------- | ------ | ------- |
-| Ethernet1 | P2P_LINK_TO_p1_Ethernet1 | routed | - | 10.255.3.0/31 | default | 1500 | False | - | - |
-| Ethernet2 | P2P_LINK_TO_p2_Ethernet2 | routed | - | 10.255.3.2/31 | default | 1500 | False | - | - |
-| Ethernet3.10 | C1_L3_SERVICE | l3dot1q | - | 10.0.1.1/29 | C1_VRF1 | - | False | - | - |
-| Ethernet3.20 | C2_L3_SERVICE | l3dot1q | - | 10.1.1.1/29 | C2_VRF1 | - | False | - | - |
+| Interface | Description | Channel Group | IP Address | VRF |  MTU | Shutdown | ACL In | ACL Out |
+| --------- | ----------- | ------------- | ---------- | ----| ---- | -------- | ------ | ------- |
+| Ethernet1 | P2P_p1_Ethernet1 | - | 10.255.3.0/31 | default | 1500 | False | - | - |
+| Ethernet2 | P2P_p2_Ethernet2 | - | 10.255.3.2/31 | default | 1500 | False | - | - |
+| Ethernet3.10 | C1_L3_SERVICE | - | 10.0.1.1/29 | C1_VRF1 | - | False | - | - |
+| Ethernet3.20 | C2_L3_SERVICE | - | 10.1.1.1/29 | C2_VRF1 | - | False | - | - |
 
 ##### ISIS
 
-| Interface | Channel Group | ISIS Instance | ISIS BFD | ISIS Metric | Mode | ISIS Circuit Type | Hello Padding | Authentication Mode |
-| --------- | ------------- | ------------- | -------- | ----------- | ---- | ----------------- | ------------- | ------------------- |
+| Interface | Channel Group | ISIS Instance | ISIS BFD | ISIS Metric | Mode | ISIS Circuit Type | Hello Padding | ISIS Authentication Mode |
+| --------- | ------------- | ------------- | -------- | ----------- | ---- | ----------------- | ------------- | ------------------------ |
 | Ethernet1 | - | CORE | - | 50 | point-to-point | level-2 | True | md5 |
 | Ethernet2 | - | CORE | - | 50 | point-to-point | level-2 | True | md5 |
 
@@ -198,7 +204,7 @@ vlan internal order ascending range 1006 1199
 ```eos
 !
 interface Ethernet1
-   description P2P_LINK_TO_p1_Ethernet1
+   description P2P_p1_Ethernet1
    no shutdown
    mtu 1500
    no switchport
@@ -215,7 +221,7 @@ interface Ethernet1
    isis authentication key 7 <removed>
 !
 interface Ethernet2
-   description P2P_LINK_TO_p2_Ethernet2
+   description P2P_p2_Ethernet2
    no shutdown
    mtu 1500
    no switchport
@@ -241,7 +247,7 @@ interface Ethernet3.10
    encapsulation dot1q vlan 10
    vrf C1_VRF1
    ip address 10.0.1.1/29
-   ip ospf area 0
+   ip ospf area 0.0.0.0
 !
 interface Ethernet3.20
    description C2_L3_SERVICE
@@ -259,13 +265,13 @@ interface Ethernet3.20
 
 | Interface | Description | VRF | IP Address |
 | --------- | ----------- | --- | ---------- |
-| Loopback0 | MPLS_Overlay_peering | default | 10.255.1.1/32 |
+| Loopback0 | ROUTER_ID | default | 10.255.1.1/32 |
 
 ##### IPv6
 
 | Interface | Description | VRF | IPv6 Address |
 | --------- | ----------- | --- | ------------ |
-| Loopback0 | MPLS_Overlay_peering | default | - |
+| Loopback0 | ROUTER_ID | default | - |
 
 ##### ISIS
 
@@ -278,12 +284,12 @@ interface Ethernet3.20
 ```eos
 !
 interface Loopback0
-   description MPLS_Overlay_peering
+   description ROUTER_ID
    no shutdown
    ip address 10.255.1.1/32
+   mpls ldp interface
    isis enable CORE
    isis passive
-   mpls ldp interface
 ```
 
 ## Routing
@@ -375,7 +381,7 @@ ip route vrf MGMT 0.0.0.0/0 172.16.1.1
 
 | Interface | Area | Cost | Point To Point |
 | -------- | -------- | -------- | -------- |
-| Ethernet3.10 | 0 | - | False |
+| Ethernet3.10 | 0.0.0.0 | - | False |
 
 #### Router OSPF Device Configuration
 
@@ -395,7 +401,7 @@ router ospf 10 vrf C1_VRF1
 | Settings | Value |
 | -------- | ----- |
 | Instance | CORE |
-| Net-ID | 49.0001.0000.0001.0001.00 |
+| Net-ID | 49.0001.0102.5500.1001.00 |
 | Type | level-2 |
 | Router-ID | 10.255.1.1 |
 | Log Adjacency Changes | True |
@@ -421,9 +427,9 @@ router ospf 10 vrf C1_VRF1
 ```eos
 !
 router isis CORE
-   net 49.0001.0000.0001.0001.00
-   is-type level-2
+   net 49.0001.0102.5500.1001.00
    router-id ipv4 10.255.1.1
+   is-type level-2
    log-adjacency-changes
    mpls ldp sync default
    !
@@ -469,13 +475,6 @@ ASN Notation: asplain
 | 10.255.2.2 | Inherited from peer group MPLS-OVERLAY-PEERS | default | - | Inherited from peer group MPLS-OVERLAY-PEERS | Inherited from peer group MPLS-OVERLAY-PEERS | - | Inherited from peer group MPLS-OVERLAY-PEERS | - | - | - | - |
 | 10.1.1.3 | 65123 | C2_VRF1 | - | standard | 100 | - | - | - | - | - | - |
 
-#### Router BGP EVPN Address Family
-
-##### EVPN Peer Groups
-
-| Peer Group | Activate | Encapsulation |
-| ---------- | -------- | ------------- |
-
 #### Router BGP VPN-IPv4 Address Family
 
 ##### VPN-IPv4 Peer Groups
@@ -486,10 +485,10 @@ ASN Notation: asplain
 
 #### Router BGP VRFs
 
-| VRF | Route-Distinguisher | Redistribute |
-| --- | ------------------- | ------------ |
-| C1_VRF1 | 10.255.1.1:10 | connected<br>ospf |
-| C2_VRF1 | 10.255.1.1:20 | connected |
+| VRF | Route-Distinguisher | Redistribute | Graceful Restart |
+| --- | ------------------- | ------------ | ---------------- |
+| C1_VRF1 | 10.255.1.1:10 | connected<br>ospf | - |
+| C2_VRF1 | 10.255.1.1:20 | connected | - |
 
 #### Router BGP Device Configuration
 
@@ -497,9 +496,9 @@ ASN Notation: asplain
 !
 router bgp 65001
    router-id 10.255.1.1
+   no bgp default ipv4-unicast
    distance bgp 20 200 200
    maximum-paths 4 ecmp 4
-   no bgp default ipv4-unicast
    neighbor MPLS-OVERLAY-PEERS peer group
    neighbor MPLS-OVERLAY-PEERS remote-as 65001
    neighbor MPLS-OVERLAY-PEERS update-source Loopback0
@@ -508,11 +507,9 @@ router bgp 65001
    neighbor MPLS-OVERLAY-PEERS send-community
    neighbor MPLS-OVERLAY-PEERS maximum-routes 0
    neighbor 10.255.2.1 peer group MPLS-OVERLAY-PEERS
-   neighbor 10.255.2.1 description rr1
+   neighbor 10.255.2.1 description rr1_Loopback0
    neighbor 10.255.2.2 peer group MPLS-OVERLAY-PEERS
-   neighbor 10.255.2.2 description rr2
-   !
-   address-family evpn
+   neighbor 10.255.2.2 description rr2_Loopback0
    !
    address-family ipv4
       no neighbor MPLS-OVERLAY-PEERS activate
@@ -576,19 +573,6 @@ router bfd
 | LDP Interface Disabled Default | True |
 | LDP Transport-Address Interface | Loopback0 |
 
-#### MPLS and LDP Device Configuration
-
-```eos
-!
-mpls ip
-!
-mpls ldp
-   interface disabled default
-   router-id 10.255.1.1
-   no shutdown
-   transport-address interface Loopback0
-```
-
 ### MPLS Interfaces
 
 | Interface | MPLS IP Enabled | LDP Enabled | IGP Sync |
@@ -596,6 +580,19 @@ mpls ldp
 | Ethernet1 | True | True | True |
 | Ethernet2 | True | True | True |
 | Loopback0 | - | True | - |
+
+### MPLS Device Configuration
+
+```eos
+!
+mpls ip
+!
+mpls ldp
+   router-id 10.255.1.1
+   transport-address interface Loopback0
+   interface disabled default
+   no shutdown
+```
 
 ## Multicast
 

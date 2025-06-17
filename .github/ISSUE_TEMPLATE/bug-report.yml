@@ -1,7 +1,8 @@
 name: Bug Report
-description: Report a bug impacting AVD collection
+description: Report a bug impacting AVD
 title: "Bug Report Title"
-labels: ['type: bug', triage]
+labels: ["type: bug", triage]
+# TODO: consider adding types here instead of label
 body:
   - type: markdown
     attributes:
@@ -21,30 +22,39 @@ body:
   - type: dropdown
     id: component
     attributes:
-      label: Which component(s) of AVD impacted
+      label: Which components of AVD are impacted
       multiple: true
       options:
-        - eos_designs
         - eos_cli_config_gen
-        - cvp_configlet_upload
-        - dhcp_provisioner
+        - eos_designs
+        - anta_runner
+        - cv_deploy
         - eos_config_deploy_cvp
-        - eos_config_deploy_eapi
-        - eos_snapshot
         - eos_validate_state
-        - yaml_template_to_facts
-        - arista.avd.default
-        - arista.avd.esi_management
-        - arista.avd.is_in_filter
-        - arista.avd.list_compress
-        - arista.avd.markdown_rendering
-        - arista.avd.natural_sort
-        - arista.avd.add_md_toc
-        - arista.avd.configlet_build_config
-        - arista.avd.inventory_to_container
-        - arista.avd.yaml_templates_to_facts
-        - new components
+        - PyAVD
         - others
+    validations:
+      required: true
+
+  - type: input
+    id: avd-version
+    attributes:
+      label: AVD version
+      description: Which AVD version are you using?
+    validations:
+      required: true
+
+  - type: input
+    id: ansible-version
+    attributes:
+      label: Ansible version
+      description: If relevant, provide the Ansible version.
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      description: If relevant, on which Python version(s) have you found this bug?
 
   - type: dropdown
     id: runner
@@ -53,8 +63,11 @@ body:
       multiple: false
       options:
         - Ansible CLI (with virtual-env or native python)
-        - Ansible CLI with AVD Runner
-        - Ansible AWX
+        - AVD container
+        - RedHat AAP / Ansible execution environments
+        - PyAVD
+        - CV Workflows
+        - Other
 
   - type: textarea
     id: step-to-reproduce
@@ -74,7 +87,7 @@ body:
     id: terms
     attributes:
       label: Contributing Guide
-      description: By submitting this issue, you agree to follow our [Contributing Guide](https://avd.sh/en/latest/docs/contribution/overview.html)
+      description: By submitting this issue, you agree to follow our [Contributing Guide](https://avd.arista.com/devel/docs/contribution/overview.html)
       options:
-        - label: I agree to follow this project's Code of Conduct
+        - label: I agree to follow this project Code of Conduct
           required: true

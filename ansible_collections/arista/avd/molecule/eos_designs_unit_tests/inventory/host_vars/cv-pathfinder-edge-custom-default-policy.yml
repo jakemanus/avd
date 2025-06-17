@@ -44,6 +44,9 @@ bgp_peer_groups:
 wan_route_servers:
   - hostname: cv-pathfinder-pathfinder
 
+ipsec_settings:
+  bind_connection_to_interface: true
+
 wan_ipsec_profiles:
   control_plane:
     shared_key: ABCDEF1234567890
@@ -81,7 +84,7 @@ wan_router:
           wan_carrier: Comcast-5G
           wan_circuit_id: AF830
           ip_address: 172.20.20.20/31
-          connected_to_pathfinder: False
+          connected_to_pathfinder: false
 
 wan_path_groups:
   - name: MPLS

@@ -4,6 +4,8 @@
 
 - [Management](#management)
   - [Management API HTTP](#management-api-http)
+- [Authentication](#authentication)
+  - [Enable Password](#enable-password)
 - [MLAG](#mlag)
   - [MLAG Summary](#mlag-summary)
   - [MLAG Device Configuration](#mlag-device-configuration)
@@ -42,9 +44,9 @@
 
 #### Management API HTTP Summary
 
-| HTTP | HTTPS | Default Services |
-| ---- | ----- | ---------------- |
-| False | True | - |
+| HTTP | HTTPS | UNIX-Socket | Default Services |
+| ---- | ----- | ----------- | ---------------- |
+| False | True | - | - |
 
 #### Management API VRF Access
 
@@ -63,6 +65,12 @@ management api http-commands
    vrf MGMT
       no shutdown
 ```
+
+## Authentication
+
+### Enable Password
+
+Enable password has been disabled
 
 ## MLAG
 
@@ -130,7 +138,7 @@ vlan internal order ascending range 1006 1199
 | 200 | SVI_200 | - |
 | 220 | SVI_220 | - |
 | 4092 | INBAND_MGMT | - |
-| 4094 | MLAG_PEER | MLAG |
+| 4094 | MLAG | MLAG |
 
 ### VLANs Device Configuration
 
@@ -152,7 +160,7 @@ vlan 4092
    name INBAND_MGMT
 !
 vlan 4094
-   name MLAG_PEER
+   name MLAG
    trunk group MLAG
 ```
 
@@ -166,45 +174,45 @@ vlan 4094
 
 | Interface | Description | Mode | VLANs | Native VLAN | Trunk Group | Channel-Group |
 | --------- | ----------- | ---- | ----- | ----------- | ----------- | ------------- |
-| Ethernet1 | BGP-LEAF1_Ethernet1 | *trunk | *1,100,200,4092 | *- | *- | 1 |
-| Ethernet2 | BGP-LEAF2_Ethernet1 | *trunk | *100,4092 | *- | *- | 2 |
-| Ethernet3 | MLAG_PEER_BGP-SPINE2_Ethernet3 | *trunk | *- | *- | *['LEAF_PEER_L3', 'MLAG'] | 3 |
-| Ethernet4 | MLAG_PEER_BGP-SPINE2_Ethernet4 | *trunk | *- | *- | *['LEAF_PEER_L3', 'MLAG'] | 3 |
+| Ethernet1 | L2_BGP-LEAF1_Ethernet1 | *trunk | *1,100,200,4092 | *- | *- | 1 |
+| Ethernet2 | L2_BGP-LEAF2_Ethernet1 | *trunk | *100,4092 | *- | *- | 2 |
+| Ethernet3 | MLAG_BGP-SPINE2_Ethernet3 | *trunk | *- | *- | *MLAG | 3 |
+| Ethernet4 | MLAG_BGP-SPINE2_Ethernet4 | *trunk | *- | *- | *MLAG | 3 |
 
 *Inherited from Port-Channel Interface
 
 ##### IPv4
 
-| Interface | Description | Type | Channel Group | IP Address | VRF |  MTU | Shutdown | ACL In | ACL Out |
-| --------- | ----------- | -----| ------------- | ---------- | ----| ---- | -------- | ------ | ------- |
-| Ethernet5 | P2P_LINK_TO_DUMMY-CORE_Ethernet1/3 | routed | - | 192.168.253.4/31 | default | 9214 | False | - | - |
+| Interface | Description | Channel Group | IP Address | VRF |  MTU | Shutdown | ACL In | ACL Out |
+| --------- | ----------- | ------------- | ---------- | ----| ---- | -------- | ------ | ------- |
+| Ethernet5 | P2P_DUMMY-CORE_Ethernet1/3 | - | 192.168.253.4/31 | default | 9214 | False | - | - |
 
 #### Ethernet Interfaces Device Configuration
 
 ```eos
 !
 interface Ethernet1
-   description BGP-LEAF1_Ethernet1
+   description L2_BGP-LEAF1_Ethernet1
    no shutdown
    channel-group 1 mode active
 !
 interface Ethernet2
-   description BGP-LEAF2_Ethernet1
+   description L2_BGP-LEAF2_Ethernet1
    no shutdown
    channel-group 2 mode active
 !
 interface Ethernet3
-   description MLAG_PEER_BGP-SPINE2_Ethernet3
+   description MLAG_BGP-SPINE2_Ethernet3
    no shutdown
    channel-group 3 mode active
 !
 interface Ethernet4
-   description MLAG_PEER_BGP-SPINE2_Ethernet4
+   description MLAG_BGP-SPINE2_Ethernet4
    no shutdown
    channel-group 3 mode active
 !
 interface Ethernet5
-   description P2P_LINK_TO_DUMMY-CORE_Ethernet1/3
+   description P2P_DUMMY-CORE_Ethernet1/3
    no shutdown
    mtu 9214
    no switchport
@@ -217,39 +225,38 @@ interface Ethernet5
 
 ##### L2
 
-| Interface | Description | Type | Mode | VLANs | Native VLAN | Trunk Group | LACP Fallback Timeout | LACP Fallback Mode | MLAG ID | EVPN ESI |
-| --------- | ----------- | ---- | ---- | ----- | ----------- | ------------| --------------------- | ------------------ | ------- | -------- |
-| Port-Channel1 | BGP-LEAF1_Po1 | switched | trunk | 1,100,200,4092 | - | - | - | - | 1 | - |
-| Port-Channel2 | BGP-LEAF2_Po1 | switched | trunk | 100,4092 | - | - | - | - | 2 | - |
-| Port-Channel3 | MLAG_PEER_BGP-SPINE2_Po3 | switched | trunk | - | - | ['LEAF_PEER_L3', 'MLAG'] | - | - | - | - |
+| Interface | Description | Mode | VLANs | Native VLAN | Trunk Group | LACP Fallback Timeout | LACP Fallback Mode | MLAG ID | EVPN ESI |
+| --------- | ----------- | ---- | ----- | ----------- | ------------| --------------------- | ------------------ | ------- | -------- |
+| Port-Channel1 | L2_BGP-LEAF1_Port-Channel1 | trunk | 1,100,200,4092 | - | - | - | - | 1 | - |
+| Port-Channel2 | L2_BGP-LEAF2_Port-Channel1 | trunk | 100,4092 | - | - | - | - | 2 | - |
+| Port-Channel3 | MLAG_BGP-SPINE2_Port-Channel3 | trunk | - | - | MLAG | - | - | - | - |
 
 #### Port-Channel Interfaces Device Configuration
 
 ```eos
 !
 interface Port-Channel1
-   description BGP-LEAF1_Po1
+   description L2_BGP-LEAF1_Port-Channel1
    no shutdown
-   switchport
    switchport trunk allowed vlan 1,100,200,4092
    switchport mode trunk
+   switchport
    mlag 1
 !
 interface Port-Channel2
-   description BGP-LEAF2_Po1
+   description L2_BGP-LEAF2_Port-Channel1
    no shutdown
-   switchport
    switchport trunk allowed vlan 100,4092
    switchport mode trunk
+   switchport
    mlag 2
 !
 interface Port-Channel3
-   description MLAG_PEER_BGP-SPINE2_Po3
+   description MLAG_BGP-SPINE2_Port-Channel3
    no shutdown
-   switchport
    switchport mode trunk
-   switchport trunk group LEAF_PEER_L3
    switchport trunk group MLAG
+   switchport
 ```
 
 ### Loopback Interfaces
@@ -260,20 +267,20 @@ interface Port-Channel3
 
 | Interface | Description | VRF | IP Address |
 | --------- | ----------- | --- | ---------- |
-| Loopback0 | Router_ID | default | 192.168.255.1/32 |
+| Loopback0 | ROUTER_ID | default | 192.168.255.1/32 |
 
 ##### IPv6
 
 | Interface | Description | VRF | IPv6 Address |
 | --------- | ----------- | --- | ------------ |
-| Loopback0 | Router_ID | default | - |
+| Loopback0 | ROUTER_ID | default | - |
 
 #### Loopback Interfaces Device Configuration
 
 ```eos
 !
 interface Loopback0
-   description Router_ID
+   description ROUTER_ID
    no shutdown
    ip address 192.168.255.1/32
 ```
@@ -289,18 +296,18 @@ interface Loopback0
 | Vlan200 | SVI_200 | default | - | False |
 | Vlan220 | SVI_220 | default | - | False |
 | Vlan4092 | Inband Management | default | 1500 | False |
-| Vlan4094 | MLAG_PEER | default | 9214 | False |
+| Vlan4094 | MLAG | default | 9214 | False |
 
 ##### IPv4
 
-| Interface | VRF | IP Address | IP Address Virtual | IP Router Virtual Address | VRRP | ACL In | ACL Out |
-| --------- | --- | ---------- | ------------------ | ------------------------- | ---- | ------ | ------- |
-| Vlan1 |  default  |  -  |  10.1.1.1/24  |  -  |  -  |  -  |  -  |
-| Vlan100 |  default  |  -  |  10.1.100.1/24  |  -  |  -  |  -  |  -  |
-| Vlan200 |  default  |  -  |  10.1.200.1/24  |  -  |  -  |  -  |  -  |
-| Vlan220 |  default  |  -  |  10.1.220.1/24  |  -  |  -  |  -  |  -  |
-| Vlan4092 |  default  |  172.23.254.2/24  |  -  |  172.23.254.1  |  -  |  -  |  -  |
-| Vlan4094 |  default  |  192.168.254.0/31  |  -  |  -  |  -  |  -  |  -  |
+| Interface | VRF | IP Address | IP Address Virtual | IP Router Virtual Address | ACL In | ACL Out |
+| --------- | --- | ---------- | ------------------ | ------------------------- | ------ | ------- |
+| Vlan1 |  default  |  -  |  10.1.1.1/24  |  -  |  -  |  -  |
+| Vlan100 |  default  |  -  |  10.1.100.1/24  |  -  |  -  |  -  |
+| Vlan200 |  default  |  -  |  10.1.200.1/24  |  -  |  -  |  -  |
+| Vlan220 |  default  |  -  |  10.1.220.1/24  |  -  |  -  |  -  |
+| Vlan4092 |  default  |  172.23.254.2/24  |  -  |  172.23.254.1  |  -  |  -  |
+| Vlan4094 |  default  |  192.168.254.0/31  |  -  |  -  |  -  |  -  |
 
 #### VLAN Interfaces Device Configuration
 
@@ -335,7 +342,7 @@ interface Vlan4092
    ip virtual-router address 172.23.254.1
 !
 interface Vlan4094
-   description MLAG_PEER
+   description MLAG
    no shutdown
    mtu 9214
    no autostate
@@ -456,9 +463,9 @@ ASN Notation: asplain
 !
 router bgp 65001
    router-id 192.168.255.1
-   maximum-paths 4 ecmp 4
    update wait-install
    no bgp default ipv4-unicast
+   maximum-paths 4 ecmp 4
    neighbor IPv4-UNDERLAY-PEERS peer group
    neighbor IPv4-UNDERLAY-PEERS send-community
    neighbor IPv4-UNDERLAY-PEERS maximum-routes 12000
@@ -466,16 +473,16 @@ router bgp 65001
    neighbor MLAG-IPv4-UNDERLAY-PEER remote-as 65001
    neighbor MLAG-IPv4-UNDERLAY-PEER next-hop-self
    neighbor MLAG-IPv4-UNDERLAY-PEER description BGP-SPINE2
+   neighbor MLAG-IPv4-UNDERLAY-PEER route-map RM-MLAG-PEER-IN in
    neighbor MLAG-IPv4-UNDERLAY-PEER send-community
    neighbor MLAG-IPv4-UNDERLAY-PEER maximum-routes 12000
-   neighbor MLAG-IPv4-UNDERLAY-PEER route-map RM-MLAG-PEER-IN in
    neighbor 192.168.253.5 peer group IPv4-UNDERLAY-PEERS
    neighbor 192.168.253.5 remote-as 65000
    neighbor 192.168.253.5 description DUMMY-CORE
    neighbor 192.168.254.1 peer group MLAG-IPv4-UNDERLAY-PEER
-   neighbor 192.168.254.1 description BGP-SPINE2
-   redistribute attached-host
+   neighbor 192.168.254.1 description BGP-SPINE2_Vlan4094
    redistribute connected
+   redistribute attached-host
    !
    address-family ipv4
       neighbor IPv4-UNDERLAY-PEERS activate

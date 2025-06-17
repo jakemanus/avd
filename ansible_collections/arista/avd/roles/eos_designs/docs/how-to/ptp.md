@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2023-2024 Arista Networks, Inc.
+  ~ Copyright (c) 2023-2025 Arista Networks, Inc.
   ~ Use of this source code is governed by the Apache License 2.0
   ~ that can be found in the LICENSE file.
   -->
@@ -37,7 +37,7 @@ PTP must be specifically enabled:
 - on the fabric level, for example FABRIC.yml
 
   ```yaml
-  ptp:
+  ptp_settings:
     enabled: true
   ```
 
@@ -77,7 +77,7 @@ spine:
 Common PTP settings can be specified for the entire topology to greatly simplify the configuration of PTP:
 
 --8<--
-roles/eos_designs/docs/tables/ptp.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/ptp.md
 --8<--
 
 These settings can also be defined on a more specific group_vars level, if the network design requires this.
@@ -184,7 +184,7 @@ If you prefer to have PTP clock identity be the system MAC-address of the switch
 - on the fabric level, for example FABRIC.yml
 
   ```yaml
-  ptp:
+  ptp_settings:
     auto_clock_identity: < true | false | default -> true >
   ```
 
@@ -299,7 +299,7 @@ ptp monitor threshold missing-message sync 3 sequence-ids
 All parameters can be overridden if required:
 
 --8<--
-roles/eos_designs/docs/tables/node-type-ptp-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-ptp-configuration.md
 --8<--
 
 ### Setting PTP DSCP values

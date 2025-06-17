@@ -3,7 +3,7 @@
 title: Input variables for eos_designs
 ---
 <!--
-  ~ Copyright (c) 2023-2024 Arista Networks, Inc.
+  ~ Copyright (c) 2023-2025 Arista Networks, Inc.
   ~ Use of this source code is governed by the Apache License 2.0
   ~ that can be found in the LICENSE file.
   -->
@@ -12,7 +12,7 @@ title: Input variables for eos_designs
 
 This document describes the supported input variables for the role `arista.avd.eos_designs`.
 
-Since several data models have changed between AVD versions 3.x and 4.x, it is recommended to study the [Porting Guide for AVD 4.x.x](../../../docs/porting-guides/4.x.x.md) for existing deployments.
+Since several data models have changed between AVD versions 4.x and 5.x, it is recommended to study the [Porting Guide for AVD 5.x.x](../../../../../../docs/porting-guides/5.x.x.md) for existing deployments.
 
 The input variables are documented below in tables and YAML.
 
@@ -31,21 +31,20 @@ The input variables are documented below in tables and YAML.
 
 ## Design type
 
-By setting the `design.type` variable, the default node-types described in [Node Type Variables](#node-type-variables) will be used.
-
---8<--
-roles/eos_designs/docs/tables/design.md
---8<--
-
 !!! note
-    The node types for AutoVPN and CV Pathfinders are part of the `l3ls-evpn` design.
+    The `design.type` variable is no longer required. It has been deprecated and will be removed in AVD 6.0.0.
+    The default [Node Type Variables](#node-type-variables) can be used with all designs.
+
+--8<--
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/design.md
+--8<--
 
 ### 3-stage clos topology support (Leaf & Spine)
 
 - The **eos_designs** role support various deployments with layer 3 leaf and spine (3-stage Clos) and optionally, with dedicated overlay controllers.
 - 3 stage Clos fabric can be represented as spines, L3 leafs and L2 leafs, and also referred to as a "POD".
 
-See the following examples using the `l3ls-evpn` design:
+See the following examples:
 
 - [AVD example for a single data center using L3LS](../../../examples/single-dc-l3ls/README.md).
 - [AVD example for a dual data center using L3LS](../../../examples/dual-dc-l3ls/README.md).
@@ -62,14 +61,14 @@ See the following examples using the `l3ls-evpn` design:
 - The **eos_designs** role support various deployments with layer 2 leaf and spine. For example, routing may terminate at the spine level or an external L3 device.
 - The Clos fabric can be represented as L3 spines, spines, and leafs.
 
-See the following examples using the `l2ls` design:
+See the following examples:
 
 - [Example for L2LS Fabric](../../../examples/l2ls-fabric/README.md).
 - [Example for Campus Fabric](../../../examples/campus-fabric/README.md).
 
 ### MPLS
 
-The **eos_designs** role with the `mpls` design type supports any arbitrary physical mesh topology by combining and interconnecting different node types with the `core_interfaces` settings.
+The **eos_designs** role supports any arbitrary physical mesh topology by combining and interconnecting different node types with the `core_interfaces` settings.
 
 The following underlay routing protocols are supported:
 
@@ -92,7 +91,7 @@ The MPLS design supports most fabric topology variables already supported by l3l
 - EVPN overlay settings are set with `mpls_overlay_role` and `mpls_route_reflectors` instead of `evpn_role` and `evpn_route_servers`.
 - No Inband Management support.
 
-See the following example using the `mpls` design:
+See the following example:
 
 - [AVD example for a MPLS-VPN based WAN Network](../../../examples/isis-ldp-ipvpn/README.md).
 
@@ -110,7 +109,7 @@ For more information please read the [WAN how-to guide](./how-to/wan.md).
 ## Fabric topology hierarchy
 
 <div style="text-align:center">
-  <img src="../../../media/5-stage-topology.gif" alt="5 stage topology"/>
+  <img src="../../../../../../docs/_media/5-stage-topology.gif" alt="5 stage topology"/>
 </div>
 
 As per the diagram above, the topology hierarchy is the following:
@@ -122,58 +121,101 @@ As per the diagram above, the topology hierarchy is the following:
 You **must** define the `fabric_name` variable and it **must** match the Ansible inventory group name covering all devices in scope of the fabric.
 
 --8<--
-roles/eos_designs/docs/tables/fabric-topology.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/fabric-topology.md
 --8<--
 
 ## Fabric IP Addressing
 
 --8<--
-roles/eos_designs/docs/tables/fabric-ip-addressing.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/fabric-ip-addressing.md
 --8<--
+
+## PREVIEW - Fabric Numbering
+
+Fabric Numbering controls how various numbers are derived across the fabric.
+
+--8<--
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/fabric-numbering.md
+--8<--
+
+### Node ID Algorithm
+
+IDs will be automatically assigned according to the configured algorithm.
+
+- `static` will use the statically set IDs under node setting.
+- `pool_manager` will activate the pool manager for ID pools.
+  Any statically set ID under node settings will be reserved in the pool if possible.
+  Otherwise an error will be raised.
+
+!!! note
+    It is strongly encouraged to use the same Node ID algorithm for all devices in the fabric.
+    Using different algorithms for groups of devices may lead to duplicates or inconsistent allocations.
+
+    The pool manager will not change IDs if they are already set under the node settings,
+    so it is possible to enable the pool manager on an existing inventory without changes.
+
+#### Details on `pool_manager` for Node IDs
+
+When using `pool_manager` for node IDs the pools are dynamically built and matched on the following device variables:
+
+- `fabric_name`
+- `dc_name`
+- `pod_name`
+- `type`
+
+Each pool will assign the first available ID starting from 1. Any statically set ID under node settings will be reserved in the pool if possible, otherwise an error will be raised.
+
+It is important to make sure the *combination* of the variables above is unique for each intended pool of devices.
+
+!!! warning
+    This means changing any of these fields may renumber the node IDs and, in turn, lead to the renumbering of IP addresses, etc.
+
+Stale entries will be reclaimed from each pool automatically after every run.
+A stale entry is an entry that was not accessed during the run.
+
+!!! note
+    Since stale entries are only reclaimed *after* every run, it is not possible to reuse an ID when removing and adding a new device
+    as part of the same execution of AVD.
+
+    To reuse a freed ID, first remove the old device and run AVD. Then add the new device and rerun AVD.
+
+The pool manager stores data in a YAML file per fabric. The default path is `<root_dir>/intended/data/<fabric_name>-ids.yml`
+
+!!! tip
+    It is possible to override the automatic assignments by editing the data files manually.
+    Just make sure to have a backup or use source control like Git and rerun AVD after changing the file.
 
 ## Node Type Variables
 
-The following tables provide information on the default node types that have been pre-defined in `eos_designs` for each design type.
+The following tables provide information on the default node types that are pre-defined in `eos_designs`.
 
 To customize or create new node types, please refer to [node type customization](#node-type-customization) section.
 
-### L3LS EVPN
-
-| Node Type Key      | Underlay Router | Uplink Type  | Default EVPN Role | L2 Network Services | L3 Network Services | VTEP | MLAG Support | Connected Endpoints | Default WAN Role | Default Underlay Routing Protocol | Default Overlay Routing Protocol |
-| ------------------ | --------------- | ------------ | ----------------- | ------------------- | ------------------- | ---- | ------------ | ------------------- | ---------------- | --------------------------------- | -------------------------------- |
-| super_spine        | ✅              | p2p          | none              | ✘                   | ✘                   | ✘    | ✘            | ✘                   | ✘                | eBGP                              | eBGP                             |
-| spine              | ✅              | p2p          | server            | ✘                   | ✘                   | ✘    | ✘            | ✘                   | ✘                | eBGP                              | eBGP                             |
-| l3leaf             | ✅              | p2p          | client            | ✅                  | ✅                  | ✅   | ✅           | ✅                  | ✘                | eBGP                              | eBGP                             |
-| l2leaf             | ✘               | port-channel | none              | ✅                  | ✘                   | ✘    | ✅           | ✅                  | ✘                | eBGP                              | eBGP                             |
-| overlay_controller | ✅              | p2p          | server            | ✘                   | ✘                   | ✘    | ✘            | ✘                   | ✘                | eBGP                              | eBGP                             |
-| wan_rr             | ✅              | p2p          | server            | ✘                   | ✅                  | ✅   | ✘            | ✘                   | server           | none                              | iBGP                             |
-| wan_router         | ✅              | p2p          | client            | ✘                   | ✅                  | ✅   | ✘            | ✘                   | client           | none                              | iBGP                             |
-
-- `wan_router`: Edge routers for AutoVPN or Edge and Transit routers for CV Pathfinder depending on the `wan_mode` value.
-- `wan_rr`: AutoVPN RR or Pathfinder depending on the `wan_mode` value.
-
-### L2LS
-
-| Node Type Key      | Underlay Router | Uplink Type  | Default EVPN Role | L2 Network Services | L3 Network Services | VTEP | MLAG Support | Connected Endpoints |
-| ------------------ | --------------- | ------------ | ----------------- | ------------------- | ------------------- | ---- | ------------ | ------------------- |
-| l3spine            | ✅              | p2p          | none              | ✅                  | ✅                  | ✘    | ✅           | ✅                  |
-| spine              | ✘               | port-channel | none              | ✅                  | ✘                   | ✘    | ✅           | ✅                  |
-| leaf               | ✘               | port-channel | none              | ✅                  | ✘                   | ✘    | ✅           | ✅                  |
-
-### MPLS
-
-| Node Type Key      | Underlay Router | Uplink Type  | Default Overlay Role | L2 Network Services | L3 Network Services | VTEP | MLAG Support | Connected Endpoints |
-| ------------------ | --------------- | ------------ | -------------------- | ------------------- | ------------------- | ---- | ------------ | ------------------- |
-| p                  | ✅              | p2p          | none                 | ✘                   | ✘                   | ✘    | ✘            | ✘                   |
-| rr                 | ✅              | p2p          | server               | ✘                   | ✘                   | ✘    | ✘            | ✘                   |
-| pe                 | ✅              | p2p          | client               | ✅                  | ✅                  | ✅   | ✘            | ✅                  |
+| Node Type Key      | Underlay Router | Uplink Type  | EVPN Role | MPLS Role   | L2 Network Services | L3 Network Services | VTEP | MLAG Support | Connected Endpoints | WAN Role | Underlay Routing Protocol | Overlay Routing Protocol | Notes |
+| ------------------ | --------------- | ------------ | ----------| ------------| ------------------- | ------------------- | ---- | ------------ | ------------------- | -------- | ------------------------- | ------------------------ | |
+| spine              | ✅              | p2p          | server    | ✘           | ✘                   | ✘                   | ✘    | ✘            | ✘                   | ✘        | eBGP                      | eBGP                     | |
+| l3leaf             | ✅              | p2p          | client    | ✘           | ✅                  | ✅                  | ✅   | ✅           | ✅                  | ✘        | eBGP                      | eBGP                     | |
+| l2leaf             | ✘               | port-channel | N/A       | ✘           | ✅                  | ✘                   | ✘    | ✅           | ✅                  | ✘        | ✘                         | ✘                        | |
+| l3spine            | ✅              | p2p          | none      | ✘           | ✅                  | ✅                  | ✘    | ✅           | ✅                  | ✘        | none                      | none                     | |
+| l2spine            | ✘               | port-channel | none      | ✘           | ✅                  | ✘                   | ✘    | ✅           | ✅                  | ✘        | ✘                         | ✘                        | |
+| super_spine        | ✅              | p2p          | none      | ✘           | ✘                   | ✘                   | ✘    | ✘            | ✘                   | ✘        | eBGP                      | eBGP                     | |
+| overlay_controller | ✅              | p2p          | server    | ✘           | ✘                   | ✘                   | ✘    | ✘            | ✘                   | ✘        | eBGP                      | eBGP                     | |
+| wan_rr             | ✅              | p2p          | server    | ✘           | ✘                   | ✅                  | ✅   | ✘            | ✘                   | server   | none                      | iBGP                     | AutoVPN RR or Pathfinder depending on the `wan_mode` value. |
+| wan_router         | ✅              | p2p          | client    | ✘           | ✘                   | ✅                  | ✅   | ✘            | ✘                   | client   | none                      | iBGP                     | Edge routers for AutoVPN or Edge and Transit routers for CV Pathfinder on the `wan_mode` value. |
+| p                  | ✅              | p2p          | none      | none, LSR   | ✘                   | ✘                   | ✘    | ✘            | ✘                   | ✘        | ISIS-SR                   | iBGP                     | |
+| rr                 | ✅              | p2p          | server    | server, LSR | ✘                   | ✘                   | ✘    | ✘            | ✘                   | ✘        | ISIS-SR                   | iBGP                     | EVPN with MPLS encapsulation |
+| pe                 | ✅              | p2p          | client    | client, LSR | ✅                  | ✅                  | ✘    | ✘            | ✅                  | ✘        | ISIS-SR                   | iBGP                     | EVPN with MPLS encapsulation, L1 Network Services (PW) |
 
 ## Node type customization
 
 AVD provides the capability to customize your node types, supporting a variety of designs.
 
 !!! note
-    The default values will be overridden if defining this key, so it is recommended to copy the defaults and modify them.
+    The default values will be overridden if this key is defined.
+    If you need to change all the existing `node_type_keys`, it is recommended to copy the defaults and modify them.
+    If you need to add custom `node_type_keys`, create them under `custom_node_type_keys`; if named identically to default `node_type_keys` entries, custom entries will replace the equivalent default entry.
+
+The default value of `node_type_keys` depend on the `design.type` setting which is deprecated for removal in AVD 6.0.0. The default design type `l3ls-evpn` provides all the default node types mentioned in the previous section.
 
 ??? example "Default value for design `l3ls-evpn`"
 
@@ -184,17 +226,19 @@ AVD provides the capability to customize your node types, supporting a variety o
         type: spine
         default_evpn_role: server
         default_ptp_priority1: 20
+        cv_tags_topology_type: spine
 
       - key: l3leaf
         type: l3leaf
         connected_endpoints: true
         default_evpn_role: client
-        default_ptp_priority1: 30
         mlag_support: true
         network_services:
           l2: true
           l3: true
         vtep: true
+        default_ptp_priority1: 30
+        cv_tags_topology_type: leaf
 
       - key: l2leaf
         type: l2leaf
@@ -204,13 +248,35 @@ AVD provides the capability to customize your node types, supporting a variety o
           l2: true
         underlay_router: false
         uplink_type: port-channel
+        cv_tags_topology_type: leaf
+
+      - key: l3spine
+        type: l3spine
+        connected_endpoints: true
+        mlag_support: true
+        network_services:
+          l2: true
+          l3: true
+        default_overlay_routing_protocol: none
+        default_underlay_routing_protocol: none
+
+      - key: l2spine
+        type: spine
+        connected_endpoints: true
+        mlag_support: true
+        network_services:
+          l2: true
+        underlay_router: false
+        uplink_type: port-channel
 
       - key: super_spine
         type: super-spine
+        cv_tags_topology_type: core
 
       - key: overlay_controller
         type: overlay-controller
         default_evpn_role: server
+        cv_tags_topology_type: spine
 
       - key: wan_router
         type: wan_router
@@ -218,9 +284,10 @@ AVD provides the capability to customize your node types, supporting a variety o
         default_wan_role: client
         default_underlay_routing_protocol: none
         default_overlay_routing_protocol: ibgp
+        default_flow_tracker_type: hardware
+        vtep: true
         network_services:
           l3: true
-        vtep: true
 
       - key: wan_rr
         type: wan_rr
@@ -228,9 +295,44 @@ AVD provides the capability to customize your node types, supporting a variety o
         default_wan_role: server
         default_underlay_routing_protocol: none
         default_overlay_routing_protocol: ibgp
+        default_flow_tracker_type: hardware
+        vtep: true
         network_services:
           l3: true
-        vtep: true
+
+      - key: p
+        type: p
+        mpls_lsr: true
+        default_mpls_overlay_role: none
+        default_overlay_routing_protocol: ibgp
+        default_underlay_routing_protocol: isis-sr
+
+      - key: pe
+        type: pe
+        mpls_lsr: true
+        connected_endpoints: true
+        default_mpls_overlay_role: client
+        default_evpn_role: client
+        network_services:
+          l1: true
+          l2: true
+          l3: true
+        default_overlay_routing_protocol: ibgp
+        default_underlay_routing_protocol: isis-sr
+        default_overlay_address_families:
+        - vpn-ipv4
+        default_evpn_encapsulation: mpls
+
+      - key: rr
+        type: rr
+        mpls_lsr: true
+        default_mpls_overlay_role: server
+        default_evpn_role: server
+        default_overlay_routing_protocol: ibgp
+        default_underlay_routing_protocol: isis-sr
+        default_overlay_address_families:
+          - vpn-ipv4
+        default_evpn_encapsulation: mpls
     ```
 
 ??? example "Default value for design `l2ls`"
@@ -241,12 +343,12 @@ AVD provides the capability to customize your node types, supporting a variety o
       - key: l3spine
         type: l3spine
         connected_endpoints: true
-        default_overlay_routing_protocol: none
-        default_underlay_routing_protocol: none
         mlag_support: true
         network_services:
           l2: true
           l3: true
+        default_overlay_routing_protocol: none
+        default_underlay_routing_protocol: none
 
       - key: spine
         type: spine
@@ -274,41 +376,41 @@ AVD provides the capability to customize your node types, supporting a variety o
 
       - key: p
         type: p
+        mpls_lsr: true
         default_mpls_overlay_role: none
         default_overlay_routing_protocol: ibgp
         default_underlay_routing_protocol: isis-sr
-        mpls_lsr: true
 
       - key: pe
         type: pe
-        connected_endpoints: true
-        default_evpn_encapsulation: mpls
-        default_evpn_role: client
-        default_mpls_overlay_role: client
-        default_overlay_address_families:
-          - vpn-ipv4
-        default_overlay_routing_protocol: ibgp
-        default_underlay_routing_protocol: isis-sr
         mpls_lsr: true
+        connected_endpoints: true
+        default_mpls_overlay_role: client
+        default_evpn_role: client
         network_services:
           l1: true
           l2: true
           l3: true
+        default_overlay_routing_protocol: ibgp
+        default_underlay_routing_protocol: isis-sr
+        default_overlay_address_families:
+          - vpn-ipv4
+        default_evpn_encapsulation: mpls
 
       - key: rr
         type: rr
-        default_evpn_encapsulation: mpls
-        default_evpn_role: server
+        mpls_lsr: true
         default_mpls_overlay_role: server
-        default_overlay_address_families:
-          - vpn-ipv4
+        default_evpn_role: server
         default_overlay_routing_protocol: ibgp
         default_underlay_routing_protocol: isis-sr
-        mpls_lsr: true
+        default_overlay_address_families:
+          - vpn-ipv4
+        default_evpn_encapsulation: mpls
     ```
 
 --8<--
-roles/eos_designs/docs/tables/node-type-keys.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-keys.md
 --8<--
 
 ### Context for ip_addressing templates
@@ -375,13 +477,14 @@ underlay_ethernet_interfaces:
 
 - `{{ link.peer }}`
 - `{{ link.peer_interface }}`
-- `{{ link.type }} (underlay_p2p or underlay_l2)`
+- `{{ link.type }} (underlay_p2p, underlay_l2, l3_edge or core_interfaces)`
 - All group/hostvars
 
 underlay_port_channel_interfaces:
 
 - `{{ link.channel_description }}`
 - `{{ link.channel_group_id }}`
+- `{{ link.peer }}`
 - `{{ link.peer_channel_group_id }}`
 - All group/hostvars
 
@@ -393,20 +496,36 @@ mlag_ethernet_interfaces:
 
 mlag_port_channel_interfaces:
 
-- `{{ mlag_interfaces }}`
+- `{{ mlag_interfaces }}` (list of strings)
 - `{{ mlag_peer }}`
+- `{{ mlag_port_channel_id }}`
 - All group/hostvars
 
 connected_endpoints_ethernet_interfaces:
 
 - `{{ peer }}`
 - `{{ peer_interface }}`
+- `{{ adapter_description }}`
 - All group/hostvars
 
 connected_endpoints_port_channel_interfaces:
 
 - `{{ peer }}`
+- `{{ peer_interface }}`
+- `{{ adapter_port_channel_id }}`
 - `{{ adapter_port_channel_description }}`
+- `{{ adapter_description }}`
+- All group/hostvars
+
+router_id_loopback_interfaces (replacing overlay_loopback_interface):
+
+- `{{ router_id_loopback_description }}`
+- `{{ overlay_loopback_description }}` (deprecated - use `router_id_loopback_description` instead)
+- All group/hostvars
+
+vtep_loopback_interface:
+
+- `{{ vtep_loopback_description }}`
 - All group/hostvars
 
 While all templates can leverage the internal switch facts (switch.*) to customize the interface descriptions,
@@ -445,7 +564,7 @@ the values are not part of the officially supported data models and may change w
     ```
 
 --8<--
-roles/eos_designs/docs/tables/type-setting.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/type-setting.md
 --8<--
 
 ## Default node types settings
@@ -458,7 +577,7 @@ on the hostname.
     This functionality will be restored as part of a later update to eos_validate_state and this note will then be removed.
 
 --8<--
-roles/eos_designs/docs/tables/default-node-types.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/default-node-types.md
 --8<--
 
 ## Node type settings
@@ -479,7 +598,7 @@ defaults <- node_group <- node_group.node <- node
     Define common node settings under defaults. This reduces user input requirements, limiting errors.
 
 --8<--
-roles/eos_designs/docs/tables/node-type-structure.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-structure.md
 --8<--
 
 ### Node type common configuration
@@ -493,13 +612,13 @@ Define your nodes, id, management and common configuration elements.
     A static unique identifier (id) is assigned to each device. This is leveraged to derive the IP address assignment from each summary defined in the Fabric Underlay and Overlay Topology Variables.
 
 --8<--
-roles/eos_designs/docs/tables/node-type-common-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-common-configuration.md
 --8<--
 
 ### Node type inband management
 
 --8<--
-roles/eos_designs/docs/tables/node-type-inband-management-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-inband-management-configuration.md
 --8<--
 
 ### Node type uplink management
@@ -511,7 +630,7 @@ Source uplink interfaces and parent interfaces are defined on the child.
     Leverage [`default_interfaces`](#default-interface-settings) data model to auto define uplink and downlink interfaces based on the node id.
 
 --8<--
-roles/eos_designs/docs/tables/node-type-uplink-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-uplink-configuration.md
 --8<--
 
 ### Node type L2 and MLAG configuration
@@ -520,67 +639,73 @@ roles/eos_designs/docs/tables/node-type-uplink-configuration.md
     Alternate addressing schemes are available at [`fabric_ip_addressing`](#fabric-ip-addressing).
 
 --8<--
-roles/eos_designs/docs/tables/node-type-l2-mlag-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-l2-mlag-configuration.md
 --8<--
 
 ### Node type Loopback and VTEP configuration
 
 --8<--
-roles/eos_designs/docs/tables/node-type-loopback-vtep-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-loopback-vtep-configuration.md
 --8<--
 
 ### Node type L3 interfaces configuration
 
 --8<--
-roles/eos_designs/docs/tables/node-type-l3-interfaces-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-l3-interfaces-configuration.md
+--8<--
+
+### Node type L3 port-channels configuration
+
+--8<--
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-l3-port-channels-configuration.md
 --8<--
 
 ### Node type BGP configuration
 
 --8<--
-roles/eos_designs/docs/tables/node-type-bgp-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-bgp-configuration.md
 --8<--
 
 ### Node type network services configuration
 
 --8<--
-roles/eos_designs/docs/tables/node-type-evpn-services-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-evpn-services-configuration.md
 --8<--
 
 ### Node type EVPN gateway configuration
 
 --8<--
-roles/eos_designs/docs/tables/node-type-evpn-ipvpn-gateway-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-evpn-ipvpn-gateway-configuration.md
 --8<--
 
 ### Node type EVPN multi-domain gateway configuration
 
 --8<--
-roles/eos_designs/docs/tables/node-type-evpn-multi-domain-gateway-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-evpn-multi-domain-gateway-configuration.md
 --8<--
 
 ### Node type ISIS Configuration
 
 --8<--
-roles/eos_designs/docs/tables/node-type-isis-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-isis-configuration.md
 --8<--
 
 ### Node type MPLS configuration
 
 --8<--
-roles/eos_designs/docs/tables/node-type-mpls-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-mpls-configuration.md
 --8<--
 
 ### Node type WAN configuration
 
 --8<--
-roles/eos_designs/docs/tables/node-type-wan-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-wan-configuration.md
 --8<--
 
 ### Node type PTP configuration
 
 --8<--
-roles/eos_designs/docs/tables/node-type-ptp-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/node-type-ptp-configuration.md
 --8<--
 
 ## Default interface settings
@@ -611,7 +736,7 @@ roles/eos_designs/docs/tables/node-type-ptp-configuration.md
     ```
 
 --8<--
-roles/eos_designs/docs/tables/default-interfaces.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/default-interfaces.md
 --8<--
 
 ## L3 edge and DCI settings
@@ -624,7 +749,7 @@ For BGP peerings the AS number must be specified. If the AS number is different 
 Make sure to configure the variables in a group_vars file covering all devices mentioned in the data model.
 
 --8<--
-roles/eos_designs/docs/tables/l3-edge.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/l3-edge.md
 --8<--
 
 ## Core interfaces settings
@@ -637,7 +762,7 @@ For BGP peerings the AS number must be specified. If the AS number is different 
 Make sure to configure the variables in a group_vars file covering all devices mentioned in the data model.
 
 --8<--
-roles/eos_designs/docs/tables/core-interfaces.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/core-interfaces.md
 --8<--
 
 ## Flagging a device as not deployed
@@ -649,7 +774,7 @@ roles/eos_designs/docs/tables/core-interfaces.md
 - To overcome this and shutdown interfaces towards undeployed peers, the variable `shutdown_interfaces_towards_undeployed_peers` can be used, satisfying the `eos_validate_state` role interface and lldp_topology tests. Again, this is only an issue if `eos_config_deploy_cvp` is used and the devices are not present in the network.
 
 --8<--
-roles/eos_designs/docs/tables/is-deployed.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/is-deployed.md
 --8<--
 
 ## Fabric settings
@@ -659,16 +784,17 @@ The following underlay routing protocols are supported:
 - EBGP (default for l3ls-evpn)
 - OSPF.
 - ISIS.
-- ISIS-SR*.
-- ISIS-LDP*.
-- ISIS-SR-LDP*.
-- OSPF-LDP*.
-- none**.
+- ISIS-SR¹.
+- ISIS-LDP¹.
+- ISIS-SR-LDP¹.
+- OSPF-LDP¹.
+- none².
 
-\* Only supported with core_interfaces data model.<br />
-\** For use with design type "l2ls" or other designs where there is no requirement for a routing protocol for underlay and/or overlay on l3 devices.
+¹ Only supported with core_interfaces data model.<br />
+² For use with design type "l2ls" or other designs where there is no requirement for a routing protocol for underlay and/or overlay on l3 devices.
 
 ??? note "Details on `enable_trunk_groups`"
+    <a id="details-on-enable_trunk_groups"></a>
     Enabling the use of trunk groups will change the behavior of several components in AVD.
 
     Changes:
@@ -681,7 +807,7 @@ The following underlay routing protocols are supported:
       - The port-channel towards the L2 switch will be assigned to this trunk group only
       - Add `UPLINK` Trunk Group to all vlans on the L2 Switch and assign this to the uplink port-channel
 
-    ![Figure: Enable Trunk Groups](../../../media/enable_trunk_groups.png)
+    ![Figure: Enable Trunk Groups](../../../../../../docs/_media/enable_trunk_groups.png)
 
     While it is recommended for consistency to set `enable_trunk_groups` for all devices in the fabric,
     it can also be set in group_vars or host_vars since trunk-groups are only local to a switch.
@@ -697,46 +823,52 @@ The following underlay routing protocols are supported:
     Using the figure under [Details on `enable_trunk_groups`](#details-on-enable_trunk_groups) as basis
     enabling with feature would remove the unmatched trunk groups like this:
 
-    ![Figure: Enable only_local_vlan_trunk_groups](../../../media/only_local_vlan_trunk_groups.png)
+    ![Figure: Enable only_local_vlan_trunk_groups](../../../../../../docs/_media/only_local_vlan_trunk_groups.png)
 
 --8<--
-roles/eos_designs/docs/tables/fabric-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/fabric-settings.md
 --8<--
 
 ## Management interface settings
 
 --8<--
-roles/eos_designs/docs/tables/management-interface-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/management-interface-settings.md
 --8<--
 
 ## BFD settings
 
 --8<--
-roles/eos_designs/docs/tables/bfd-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/bfd-settings.md
 --8<--
 
 ## BGP settings
 
 --8<--
-roles/eos_designs/docs/tables/bgp-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/bgp-settings.md
 --8<--
 
 ## IPv4 ACL settings
 
 --8<--
-roles/eos_designs/docs/tables/ipv4-acls.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/ipv4-acls.md
+--8<--
+
+### IPv4 Prefix-List Catalog settings
+
+--8<--
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/ipv4-prefix-list-catalog.md
 --8<--
 
 ## OSPF settings
 
 --8<--
-roles/eos_designs/docs/tables/ospf-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/ospf-settings.md
 --8<--
 
 ## ISIS settings
 
 --8<--
-roles/eos_designs/docs/tables/isis-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/isis-settings.md
 --8<--
 
 ## Overlay settings
@@ -745,21 +877,21 @@ The following overlay routing protocols are supported:
 
 - EBGP (default for l3ls-evpn)
 - IBGP (only with OSPF or ISIS variants in underlay)
-- none*
-- HER (Head-End Replication)**
+- none¹
+- HER (Head-End Replication)²
 - CVX (CloudVision eXchange)
 
-\* For use with design type "l2ls" or other designs where there is no requirement for a routing protocol for underlay and/or overlay on l3 devices.<br />
-\** By setting `overlay_routing_protocol:HER`, `eos_designs` will configure static VXLAN flood-lists instead of using a dynamic overlay protocol.
+¹ For use with design type "l2ls" or other designs where there is no requirement for a routing protocol for underlay and/or overlay on l3 devices.<br />
+² By setting `overlay_routing_protocol:HER`, `eos_designs` will configure static VXLAN flood-lists instead of using a dynamic overlay protocol.
 
 --8<--
-roles/eos_designs/docs/tables/overlay-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/overlay-settings.md
 --8<--
 
 ## EVPN settings
 
 --8<--
-roles/eos_designs/docs/tables/evpn-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/evpn-settings.md
 --8<--
 
 ## WAN Settings
@@ -767,7 +899,7 @@ roles/eos_designs/docs/tables/evpn-settings.md
 ### WAN generic settings
 
 --8<--
-roles/eos_designs/docs/tables/wan-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/wan-settings.md
 --8<--
 
 ### WAN hierarchy
@@ -777,19 +909,19 @@ roles/eos_designs/docs/tables/wan-settings.md
     This section is only relevant for CV Pathfinder and not for AutoVPN
 
 --8<--
-roles/eos_designs/docs/tables/wan-cv-pathfinder-regions.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/wan-cv-pathfinder-regions.md
 --8<--
 
 ### WAN path-groups and carriers
 
 --8<--
-roles/eos_designs/docs/tables/wan-path-groups-and-carriers.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/wan-path-groups-and-carriers.md
 --8<--
 
 ### WAN route-servers
 
 --8<--
-roles/eos_designs/docs/tables/wan-route-servers.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/wan-route-servers.md
 --8<--
 
 ### WAN Virtual topologies
@@ -797,13 +929,13 @@ roles/eos_designs/docs/tables/wan-route-servers.md
 WAN virtual topologies leverage Deep Packet Inspection Engine to match traffic.
 
 --8<--
-roles/eos_designs/docs/tables/wan-virtual-topologies.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/wan-virtual-topologies.md
 --8<--
 
 #### Application Classification
 
 --8<--
-roles/eos_designs/docs/tables/application-classification.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/application-classification.md
 --8<--
 
 #### Internet Exit policies
@@ -813,7 +945,7 @@ roles/eos_designs/docs/tables/application-classification.md
     This section is only relevant for CV Pathfinder and not for AutoVPN
 
 --8<--
-roles/eos_designs/docs/tables/cv-pathfinder-internet-exit-policies.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/cv-pathfinder-internet-exit-policies.md
 --8<--
 
 ##### Zscaler Internet Exit
@@ -824,49 +956,71 @@ roles/eos_designs/docs/tables/cv-pathfinder-internet-exit-policies.md
     See the top level key description for more information.
 
 --8<--
-roles/eos_designs/docs/tables/zscaler-endpoints.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/zscaler-endpoints.md
 --8<--
 
 ## Management settings
 
 --8<--
-roles/eos_designs/docs/tables/management-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/management-settings.md
 --8<--
 
 ### Source-interfaces settings
 
 --8<--
-roles/eos_designs/docs/tables/management-source-interfaces-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/management-source-interfaces-settings.md
 --8<--
 
 ### sFlow settings
 
 --8<--
-roles/eos_designs/docs/tables/management-sflow-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/management-sflow-settings.md
 --8<--
 
 ### Flow Tracking Settings
 
 --8<--
-roles/eos_designs/docs/tables/management-flow-tracking-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/management-flow-tracking-settings.md
 --8<--
 
 ### SNMP settings
 
 --8<--
-roles/eos_designs/docs/tables/management-snmp-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/management-snmp-settings.md
+--8<--
+
+## Monitoring
+
+### Event monitor
+
+--8<--
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/event-monitor.md
+--8<--
+
+### Load interval
+
+--8<--
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/load-interval.md
+--8<--
+
+## Quality of Service
+
+### Queue monitor-streaming
+
+--8<--
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/queue-monitor-streaming.md
 --8<--
 
 ## System settings
 
 --8<--
-roles/eos_designs/docs/tables/system-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/system-settings.md
 --8<--
 
 ## CloudVision Settings
 
 --8<--
-roles/eos_designs/docs/tables/cloudvision-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/cloudvision-settings.md
 --8<--
 
 ## Endpoint connectivity
@@ -938,7 +1092,6 @@ Both data models support variable inheritance from profiles defined under [`port
             switches: [ DC1-LEAF2A, DC1-LEAF2B ]
             profile: DB_Clusters
             port_channel:
-              description: PortChanne1
               mode: active
 
       - name: server03
@@ -952,7 +1105,6 @@ Both data models support variable inheritance from profiles defined under [`port
             switches: [ DC1-SVC3A, DC1-SVC3B ]
             profile: VM_Servers
             port_channel:
-              description: PortChanne1
               mode: active
     # Firewall
     firewalls:
@@ -964,7 +1116,7 @@ Both data models support variable inheritance from profiles defined under [`port
             switches: [ DC1-LEAF2A, DC1-LEAF2B ]
             profile: TENANT_A_B
             port_channel:
-              description: PortChanne1
+              endpoint_port_channel: Bond0
               mode: active
 
     # Routers
@@ -1010,7 +1162,7 @@ Both data models support variable inheritance from profiles defined under [`port
             switches: [ DC1-SVC3A, DC1-SVC3B ]
             profile: VM_Servers
             port_channel:
-              description: PortChanne1
+              endpoint_port_channel: Bond0
               mode: active
     ```
 
@@ -1018,15 +1170,10 @@ Both data models support variable inheritance from profiles defined under [`port
 
     To help provide consistency when configuring EVPN A/A ESI values, arista.avd provides an abstraction in the form of a `short_esi` key.
     `short_esi` is an abbreviated 3 octets value to encode [Ethernet Segment ID](https://tools.ietf.org/html/rfc7432#section-8.3.1) and LACP ID.
-    Transformation from abstraction to network values is managed by the following Ansible filter plugins:
 
-    - [`arista.avd.generate_esi`](../../../docs/plugins/Filter_plugins/generate_esi.md)
-    - [`arista.avd.generate_lacp_id`](../../../docs/plugins/Filter_plugins/generate_lacp_id.md).
-    - [`arista.avd.generate_route_target`](../../../docs/plugins/Filter_plugins/generate_route_target.md).
+    The abstracted `short_esi: "0303:0202:0101"` is transformed into the following network values:
 
-    The plugins provides the following result:
-
-    - *EVPN ESI*: 000:000:0303:0202:0101
+    - *EVPN ESI*: 0000:0000:0303:0202:0101
     - *LACP ID*: 0303.0202.0101
     - *Route Target*: 03:03:02:02:01:01
 
@@ -1053,14 +1200,22 @@ Both data models support variable inheritance from profiles defined under [`port
             switches: [ DC1-SVC3A, DC1-SVC4A ]
             profile: VM_Servers
             port_channel:
-              description: PortChanne1
+              endpoint_port_channel: Bond0
               mode: active
             ethernet_segment:
               short_esi: 0303:0202:0101
     ```
 
 --8<--
-roles/eos_designs/docs/tables/connected-endpoints.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/connected-endpoints.md
+--8<--
+
+### Connected endpoints default description or description template settings
+
+Connected endpoints support the customization of generated descriptions with a static value or template.
+
+--8<--
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/default-connected-endpoints-description.md
 --8<--
 
 ### Network ports settings
@@ -1068,11 +1223,61 @@ roles/eos_designs/docs/tables/connected-endpoints.md
 The `network_ports` data model is intended to be used with `port_profiles` and `parent_profiles` to keep the configuration generic and compact,
 but all features and keys supported under `connected_endpoints.adapters` are also supported directly under `network_ports`.
 
+To filter what switches to configure, match on a switch full hostname or platform type using regex patterns. When both criteria are used together, the switch must match both in order to generate the assigned port configuration.
+
 All ranges defined under `switch_ports` will be expanded to individual port configuration which leads to a some behavioral differences to `connected_endpoints`:
 
 - By default each port will be configured in a port-channel with one member when leveraging automatic channel-id generation.
   To configure multiple ports as member of the same port-channel set the channel-id key (see the example below).
 - Inconsistent configurations when used with `short_esi: auto` or `designated_forwarder_algorithm: auto`, since those rely on information from multiple switches and interfaces.
+
+??? example "Example using match criteria"
+
+    ```yaml
+    # Port Profiles
+    # Common settings inherited to network_ports
+    port_profiles:
+      - profile: common
+        mode: access
+        vlans: "999"
+        spanning_tree_portfast: edge
+        spanning_tree_bpdufilter: enabled
+
+    # Network Ports
+    # Switches are matched with regex matching the full hostname and platform type.
+    network_ports:
+      - switches:
+          - network-ports-[est]{5}-.*
+        platforms:
+          - 720XPM-48Y6
+        switch_ports:
+          - Ethernet1-48
+        profile: common
+
+    # Switches are matched on platform type, regardless of hostname.
+      - platforms:
+          - 720XPM-24Y6
+        switch_ports:
+          - Ethernet1-24
+        profile: common
+
+    # Custom Platform Settings
+    # Copied default 720XP platform settings, adding more specific platform names for match.
+    # These platform types can be assigned to devices as part of nodes/node_group settings.
+    custom_platform_settings:
+      - platforms:
+          - 720XPM-48Y6
+          - 720XPM-24Y6
+        feature_support:
+          poe: true
+          queue_monitor_length_notify: false
+        reload_delay:
+          mlag: 300
+          non_mlag: 330
+        trident_forwarding_table_partition: flexible exact-match 16000 l2-shared 18000 l3-shared
+          22000
+
+    ```
 
 ??? example "Example using network ports and profiles"
 
@@ -1105,14 +1310,14 @@ All ranges defined under `switch_ports` will be expanded to individual port conf
         switch_ports:
           - Ethernet1-2
         profile: pc
-        description: PCs
+        endpoint: PCs
 
       - switches:
           - network-ports-tests-2$
         switch_ports:
           - Ethernet1-2
         profile: ap_with_port_channel
-        description: AP1 with port_channel
+        endpoint: AP1 with port_channel
 
       - switches:
           - network-ports-[est]{5}-.*
@@ -1120,7 +1325,7 @@ All ranges defined under `switch_ports` will be expanded to individual port conf
           - Ethernet3-4
           - Ethernet2/1-48
         profile: pc
-        description: PCs
+        endpoint: PCs
     ```
 
 ??? example "Example using network ports to configure multiple ports in the same port-channel"
@@ -1169,7 +1374,15 @@ All ranges defined under `switch_ports` will be expanded to individual port conf
         To leverage automatic channel-id computation and configure port-channel with multiple members, `connected_endpoints` should be used.
 
 --8<--
-roles/eos_designs/docs/tables/network-ports.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-ports.md
+--8<--
+
+### Network ports default description or description template settings
+
+Network ports support the customization of generated descriptions with a static value or template.
+
+--8<--
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/default-network-ports-description.md
 --8<--
 
 ### Port profiles settings
@@ -1180,7 +1393,7 @@ Keys are the same as used under endpoint adapters. Keys defined under endpoints 
 A port profile can refer to another port profile using `parent_profile` to inherit settings in up to two levels (adapter->profile->parent_profile).
 
 --8<--
-roles/eos_designs/docs/tables/port-profiles.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/port-profiles.md
 --8<--
 
 ### Connected endpoints keys settings
@@ -1196,7 +1409,7 @@ The keys can be customized to provide a better better organization or grouping o
     The default values will be overridden if defining this key, so it is recommended to copy the defaults and modify them.
 
 --8<--
-roles/eos_designs/docs/tables/connected-endpoints-keys.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/connected-endpoints-keys.md
 --8<--
 
 ## Network Services
@@ -1230,29 +1443,35 @@ The keys used to define network services are configurable using [`network_servic
 The default available keys is `tenants`.
 
 --8<--
-roles/eos_designs/docs/tables/network-services.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services.md
 --8<--
 
 --8<--
-roles/eos_designs/docs/tables/new-network-services-bgp-vrf-config.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/new-network-services-bgp-vrf-config.md
 --8<--
 
 #### Network services VRFs configuration
 
 --8<--
-roles/eos_designs/docs/tables/network-services-vrfs-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services-vrfs-settings.md
 --8<--
 
 #### Network services VRF SVIs configuration
 
 --8<--
-roles/eos_designs/docs/tables/network-services-vrfs-svis-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services-vrfs-svis-settings.md
 --8<--
 
 #### Network services VRF L3 Interfaces configuration
 
 --8<--
-roles/eos_designs/docs/tables/network-services-vrfs-l3-interfaces-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services-vrfs-l3-interfaces-settings.md
+--8<--
+
+#### Network services VRF L3 Port-Channels configuration
+
+--8<--
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services-vrfs-l3-port-channel-settings.md
 --8<--
 
 #### Network services VRF Loopbacks configuration
@@ -1263,37 +1482,37 @@ Loopbacks are usually configured with `vtep_diagnostic` which supports IP pools 
 IP addresses on individual nodes.
 
 --8<--
-roles/eos_designs/docs/tables/network-services-vrfs-loopbacks-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services-vrfs-loopbacks-settings.md
 --8<--
 
 #### Network services VRF BGP configuration
 
 --8<--
-roles/eos_designs/docs/tables/network-services-vrfs-bgp-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services-vrfs-bgp-settings.md
 --8<--
 
 #### Network services VRF OSPF configuration
 
 --8<--
-roles/eos_designs/docs/tables/network-services-vrfs-ospf-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services-vrfs-ospf-settings.md
 --8<--
 
 #### Network services L2 VLANs configuration
 
 --8<--
-roles/eos_designs/docs/tables/network-services-l2vlans-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services-l2vlans-settings.md
 --8<--
 
 #### Network services point-to-point services configuration
 
 --8<--
-roles/eos_designs/docs/tables/network-services-point-to-point-services-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services-point-to-point-services-settings.md
 --8<--
 
 #### Network services multicast configuration
 
 --8<--
-roles/eos_designs/docs/tables/network-services-multicast-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services-multicast-settings.md
 --8<--
 
 ### SVI profiles settings
@@ -1312,15 +1531,18 @@ SVI profiles can be leveraged to share common settings between SVIs.
   6. svi_parent_profile.structured_config
 
 --8<--
-roles/eos_designs/docs/tables/svi-profiles.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/svi-profiles.md
 --8<--
 
 ### EVPN VLAN aware bundles settings
 
-Optional VLAN aware bundles to share common settings for l2vlans which are supposed to use the same vlan-aware-bundle.
+EVPN VLAN aware bundles referenced by name in `<network_services_key>[].evpn_vlan_bundle` or `<network_services_key>[].vrfs[].evpn_vlan_bundle`
+or `<network_services_key>[].vrfs[].svis[].evpn_vlan_bundle` or `<network_services_key>[].l2vlans[].evpn_vlan_bundle`.
+
+An EVPN VLAN aware bundle will only be configured if at least one VLAN is associated with it.
 
 --8<--
-roles/eos_designs/docs/tables/evpn-vlan-bundles.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/evpn-vlan-bundles.md
 --8<--
 
 ### Network services keys settings
@@ -1334,7 +1556,7 @@ The keys can be customized to provide a better better organization or grouping o
     The default values will be overridden if defining this key, so it is recommended to copy the defaults and modify them.
 
 --8<--
-roles/eos_designs/docs/tables/network-services-keys.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/network-services-keys.md
 --8<--
 
 ## Platform settings
@@ -1349,10 +1571,12 @@ Management interface is modified for specific platforms like modular platforms w
     The reload delay values should be reviewed and tuned to the specific environment.
 
 !!! note
-    The default values will be overridden if defining this key, so it is recommended to copy the defaults and modify them.
+    The default values will be overridden if `platform_settings` is defined.
+    If you need to replace all the default platforms, it is recommended to copy the defaults and modify them.
+    If you need to add custom platforms, create them under `custom_platform_settings`; if named identically to default `platform_settings` entries, custom entries will replace the equivalent default entry.
 
 --8<--
-roles/eos_designs/docs/tables/platform-settings.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/platform-settings.md
 --8<--
 
 ## PTP settings
@@ -1360,7 +1584,7 @@ roles/eos_designs/docs/tables/platform-settings.md
 See the [Configuring PTP](how-to/ptp.md) how-to for details.
 
 --8<--
-roles/eos_designs/docs/tables/ptp.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/ptp_settings.md
 --8<--
 
 ## Custom Structured Configuration
@@ -1368,7 +1592,7 @@ roles/eos_designs/docs/tables/ptp.md
 See the [Custom Structured Configuration](how-to/custom-structured-configuration.md) how-to for details.
 
 --8<--
-roles/eos_designs/docs/tables/custom-structured-configuration.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/custom-structured-configuration.md
 --8<--
 
 ## CloudVision Topology settings
@@ -1396,7 +1620,7 @@ This feature currently provides the following configurations based on the given 
     `max_uplink_switches` and `max_parallel_uplinks` to ensure consistent IP addressing.
 
 ??? example "`cv_topology` example"
-    To use this feature set `default_interfaces` according to the intended design (see [default_intefaces](#default-interface-settings) for details) and set `use_cv_topology` to `true`.
+    To use this feature set `default_interfaces` according to the intended design (see [default_interfaces](#default-interface-settings) for details) and set `use_cv_topology` to `true`.
     Provide a full topology under `cv_topology` like this example:
 
     ```yaml
@@ -1431,5 +1655,5 @@ This feature currently provides the following configurations based on the given 
     ```
 
 --8<--
-roles/eos_designs/docs/tables/cv-topology.md
+ansible_collections/arista/avd/roles/eos_designs/docs/tables/cv-topology.md
 --8<--

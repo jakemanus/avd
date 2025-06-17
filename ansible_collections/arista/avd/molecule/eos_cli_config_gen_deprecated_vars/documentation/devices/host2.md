@@ -2,34 +2,72 @@
 
 ## Table of Contents
 
-- [Spanning Tree](#spanning-tree)
-  - [Spanning Tree Summary](#spanning-tree-summary)
-  - [Spanning Tree Device Configuration](#spanning-tree-device-configuration)
+- [Authentication](#authentication)
+  - [AAA Accounting](#aaa-accounting)
+- [Interfaces](#interfaces)
+  - [VXLAN Interface](#vxlan-interface)
 - [Routing](#routing)
   - [Router BGP](#router-bgp)
 
-## Spanning Tree
+## Authentication
 
-### Spanning Tree Summary
+### AAA Accounting
 
-STP mode: **rapid-pvst**
+#### AAA Accounting Summary
 
-#### Rapid-PVST Instance and Priority
+| Type | Commands | Record type | Groups | Logging |
+| ---- | -------- | ----------- | ------ | ------- |
+| Exec - Console | - | start-stop | TACACS | True |
+| Commands - Console | all | start-stop | TACACS | True |
+| Commands - Console | 0 | start-stop |  -  | True |
+| Commands - Console | 1 | start-stop | TACACS1 | False |
+| Commands - Console | 2 | none | - | - |
+| Commands - Console | 3 | start-stop |  -  | False |
+| Exec - Default | - | start-stop | TACACS | True |
+| System - Default | - | start-stop | TACACS | - |
+| Dot1x - Default | - | start-stop | group1 | - |
+| Commands - Default | all | start-stop | TACACS | True |
+| Commands - Default | 0 | start-stop | - | True |
+| Commands - Default | 1 | start-stop | TACACS | False |
+| Commands - Default | 3 | start-stop | - | False |
 
-| Instance(s) | Priority |
-| -------- | -------- |
-| 1,2,3,4,5,10-15 | 4096 |
-| 3 | 8192 |
-| 100-500 | 16384 |
+#### AAA Accounting Device Configuration
 
-### Spanning Tree Device Configuration
+```eos
+aaa accounting exec console start-stop group TACACS logging
+aaa accounting commands all console start-stop group TACACS logging
+aaa accounting commands 0 console start-stop logging
+aaa accounting commands 1 console start-stop group TACACS1
+aaa accounting commands 2 console none
+aaa accounting exec default start-stop group TACACS logging
+aaa accounting system default start-stop group TACACS
+aaa accounting dot1x default start-stop group group1
+aaa accounting commands all default start-stop group TACACS logging
+aaa accounting commands 0 default start-stop logging
+aaa accounting commands 1 default start-stop group TACACS
+```
+
+## Interfaces
+
+### VXLAN Interface
+
+#### VXLAN Interface Summary
+
+| Setting | Value |
+| ------- | ----- |
+| UDP port | 4789 |
+| Qos dscp propagation encapsulation | Disabled |
+| Qos ECN propagation | Disabled |
+| Qos map dscp to traffic-class decapsulation | Disabled |
+
+#### VXLAN Interface Device Configuration
 
 ```eos
 !
-spanning-tree mode rapid-pvst
-spanning-tree vlan-id 1,2,3,4,5,10-15 priority 4096
-spanning-tree vlan-id 3 priority 8192
-spanning-tree vlan-id 100-500 priority 16384
+interface Vxlan1
+   no vxlan qos ecn propagation
+   no vxlan qos dscp propagation encapsulation
+   no vxlan qos map dscp to traffic-class decapsulation
 ```
 
 ## Routing
@@ -44,11 +82,7 @@ ASN Notation: asplain
 | ------ | --------- |
 | 65101 | 192.168.255.3 |
 
-#### Router BGP VRFs
-
-| VRF | Route-Distinguisher | Redistribute |
-| --- | ------------------- | ------------ |
-| test | - | connected |
+#### Router BGP EVPN Address Family
 
 #### Router BGP Device Configuration
 
@@ -56,8 +90,8 @@ ASN Notation: asplain
 !
 router bgp 65101
    router-id 192.168.255.3
-   redistribute connected
    !
-   vrf test
-      redistribute connected
+   address-family evpn
+      bgp additional-paths receive
+      bgp additional-paths send any
 ```

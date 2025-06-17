@@ -11,7 +11,7 @@ spine:
     max_uplink_switches: 4
     uplink_ipv4_pool: 172.16.21.0/24
     uplink_ptp:
-      enable: True
+      enable: true
     bgp_defaults:
       - distance bgp 20 200 200
     raw_eos_cli: |
@@ -20,13 +20,13 @@ spine:
   nodes:
     # Spine also working as EVPN RS
     - name: DC2-POD1-SPINE1
-      id: 1
+      # id: 1 Using pool manager for ID
       mgmt_ip: 192.168.1.20/24
       evpn_role: server
       uplink_switch_interfaces: ['Ethernet1', 'Ethernet1']
       evpn_route_servers: [ DC1-RS1, DC1-SUPER-SPINE1, DC1-POD1-SPINE1, DC1-POD1-LEAF1A ]
     - name: DC2-POD1-SPINE2
-      id: 2
+      # id: 2 Using pool manager for ID
       evpn_role: none
       mgmt_ip: 192.168.1.21/24
       uplink_switch_interfaces: ['Ethernet2', 'Ethernet2']
@@ -40,7 +40,7 @@ l3leaf:
     uplink_interfaces: ['Ethernet1', 'Ethernet2']
     uplink_switches: ['DC2-POD1-SPINE1', 'DC2-POD1-SPINE2']
     uplink_ipv4_pool: 172.17.210.0/24
-    uplink_ptp: {'enable': True}
+    uplink_ptp: {'enable': true}
     bgp_defaults:
       - distance bgp 20 200 200
     bgp_as: 65555
@@ -52,7 +52,7 @@ l3leaf:
     virtual_router_mac_address: 00:1c:73:00:dc:01
     mlag: false
     filter:
-      always_include_vrfs_in_tenants: [ 'all' ] #Testing that we configure all VRFs even with no VLANs.
+      always_include_vrfs_in_tenants: [ 'all' ] # Testing that we configure all VRFs even with no VLANs.
       tags: []
     raw_eos_cli: |
       interface Loopback1010
@@ -65,7 +65,7 @@ l3leaf:
       bgp_as: 65211
       nodes:
         - name: DC2-POD1-LEAF1A
-          id: 1
+          # id: 1 Using pool manager for ID
           mgmt_ip: 192.168.1.22/24
           uplink_switch_interfaces: ['Ethernet3', 'Ethernet3']
 
@@ -77,14 +77,14 @@ l3leaf:
       evpn_services_l2_only: true
       nodes:
         - name: DC2-POD1-LEAF2A
-          id: 2
+          # id: 2 Using pool manager for ID
           mgmt_ip: 192.168.1.24/24
           uplink_switch_interfaces: ['Ethernet4', 'Ethernet4']
 
 # In DC2 we define all variables via defaults if possible
 l2leaf:
   defaults:
-    inband_management_subnet: 172.21.210.0/24
+    inband_mgmt_subnet: 172.21.210.0/24
     platform: vEOS-LAB
     uplink_interfaces: [ Ethernet1 ]
     spanning_tree_mode: mstp
@@ -98,13 +98,13 @@ l2leaf:
       uplink_switches: ['DC2-POD1-LEAF1A']
       nodes:
         - name: DC2-POD1-L2LEAF1A
-          id: 1
+          # id: 1 Using pool manager for ID
           mgmt_ip: 192.168.1.23/24
           uplink_switch_interfaces: ['Ethernet3']
     - group: RACK2_SINGLE
       uplink_switches: ['DC2-POD1-LEAF2A']
       nodes:
         - name: DC2-POD1-L2LEAF2A
-          id: 2
+          # id: 2 Using pool manager for ID
           mgmt_ip: 192.168.1.25/24
           uplink_switch_interfaces: ['Ethernet3']

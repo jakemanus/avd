@@ -1,5 +1,12 @@
 ---
 underlay_routing_protocol: ospf
+underlay_ospf_authentication:
+  enabled: true
+  message_digest_keys:
+    - id: 1
+      key: arista123arista
+    - id: 2
+      key: please_vault_me
 
 type: l3leaf
 
@@ -17,6 +24,7 @@ l3leaf:
     uplink_interfaces: ["Ethernet1"]
   node_groups:
     - group: MLAG_OSPF_L3LEAF1
+      spanning_tree_mst_pvst_boundary: true
       nodes:
         - name: MLAG-OSPF-L3LEAF1A
           id: 4

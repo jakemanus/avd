@@ -3,7 +3,7 @@
 title: Ansible Collection Role eos_designs - WAN
 ---
 <!--
-  ~ Copyright (c) 2023-2024 Arista Networks, Inc.
+  ~ Copyright (c) 2023-2025 Arista Networks, Inc.
   ~ Use of this source code is governed by the Apache License 2.0
   ~ that can be found in the LICENSE file.
   -->
@@ -17,8 +17,8 @@ title: Ansible Collection Role eos_designs - WAN
 
 ???+ warning "About PREVIEW keys in the schema"
 
-    Some of the WAN functionality is still in PREVIEW. When this is the case it is indicated as such in the documentation.
-    For these PREVIEW features, Everything is subject to change, is not supported and may not be complete.
+    Some of the WAN functionality is still in preview. When this is the case it is indicated as such in the documentation.
+    For these preview features, Everything is subject to change, is not supported and may not be complete.
 
     If you have any questions, please leverage the GitHub [discussions board](https://github.com/aristanetworks/avd/discussions)
 
@@ -26,17 +26,17 @@ title: Ansible Collection Role eos_designs - WAN
 
 Please familiarize yourself with the Arista WAN terminology before proceeding:
 
-- https://www.arista.com/en/solutions/enterprise-wan
-- https://tech-library.arista.com/wan/ (Tech Library access requires an Arista account)
+- <https://www.arista.com/en/solutions/enterprise-wan>
+- <https://tech-library.arista.com/wan/> (Tech Library access requires an Arista account)
 
 ### Design points
 
 - When deploying CV Pathfinder, the assumption is that the deployment is using CVaaS.
 - The intent is to be able to support having the different WAN participating devices in different inventories.
-- Only iBGP is supported as an overlay_routing_protocol.
 - On the AutoVPN Route Reflectors and Pathfinders, a listen range statement is used for BGP to allow for distributed Ansible inventories.
 - VRF `default` is being configured by default on all WAN devices with a `wan_vni` of 1. To override this, it is necessary to configure VRF `default` in a tenant in `network_services`.
 - Path-group ID `65535` is reserved for the path-group called `LAN_HA`.
+- iBGP is configured over the WAN for the overlay. The `overlay_routing_protocol` key is considered only on the LAN side.
 
 !!! info "CV Pathfinder & CloudVision"
 
@@ -45,18 +45,15 @@ Please familiarize yourself with the Arista WAN terminology before proceeding:
     role, as CloudVision relies on metadata sent by AVD for visualization and to
     generate and deliver certificates for STUN to devices.
 
-### Features in PREVIEW
+### Features in preview
 
-- WAN HA is in PREVIEW
-
+- WAN HA is in preview
   - While HA is in preview, it is required to either enable or disable HA if exactly two WAN routers are in one node group.
-  - For HA, the considered interfaces are only the `uplink_interfaces` in VRF default.
-  - It is not yet supported to disable HA on a specific LAN interface on the device, nor is it supported to add HA configuration on a non-uplink interface.
+  - For HA, the considered interfaces are only the `uplink_interfaces` in VRF default or the interfaces defined under `wan_ha.ha_interfaces` node settings. This key can be used either to select only some `uplink_interfaces` available for establishing the HA tunnel OR to select one interface that is not an `uplink_interfaces`, for instance for direct HA connectivity.
   - HA for AutoVPN is not supported
-- Internet-exit for Zscaler is in PREVIEW
-- `flow_tracking_settings` is in PREVIEW as the model will change in the next release.
+- Internet-exit for Zscaler is in preview
 - `eos_validate_state` is being enriched to support new tests for WAN designs.
-    These new tests are added only in the [ANTA preview](../../../eos_validate_state/ANTA-Preview.md) mode.
+- EVPN WAN gateway is in preview as it requires the use of `wan_use_evpn_node_settings_for_lan`. It is supported only on sites with single WAN Router.
 
 ### Known limitations
 
@@ -67,16 +64,17 @@ Please familiarize yourself with the Arista WAN terminology before proceeding:
 - The name of the AVT policies and AVT profiles are configurable in the input variables. The Load Balance policies are named `LB-<profile_name>` and are not configurable.
 - LAN support is limited to single L2 using `uplink_type: lan` and eBGP L3 using `uplink_type: p2p-vrfs` in conjunction of `underlay_routing_protocol: ebgp`.
 - All the WAN routers must have a common path-group with at least one WAN route server to be able to inject the default control-plane match statement in the VRF default WAN policy.
+- For the default VRF, routes received over BGP peering configured under tenants in `network_services` will not be automatically advertised to the WAN (they will be advertised toward the LAN if eBGP is used). To advertise them towards the WAN, they need to be injected in EVPN and this can be achieved by adding a route-map to mark them with the site SOO.
+- Internet exit policies are not supported under WAN port-channel interfaces.
+- EVPN WAN gateway is supported only on sites with single WAN Router.
 
 ### Future work
 
-- HA support out of PREVIEW
 - New LAN scenarios (L2 port-channel, HA for L2 `lan` using VRRP..)
 - HA for AutoVPN
 - WAN Internet exit for other type than Zscaler
 - `import path-group` functionality
 - Indirect connectivity to pathfinder
-- BGP peerings on WAN L3 interfaces and associated route filtering.
 - Extra STUN server for a given path-group not connected to pathfinder
 - Auto generation of Path-group IDs and other IDs.
 - Proper OSPF-BGP redistribution in VRF default.
@@ -110,6 +108,7 @@ The following table list the `eos_designs` top level keys used for WAN and how t
 | Key | Must be the same for all the WAN routers | Comment |
 | --- | ---------------------------------------- | ------- |
 | `wan_mode` | ✅ | Two possible modes, `autovpn` and `cv-pathfinder` (default). |
+| `wan_encapsulation` | ✅ | Two possible encapsulations, `vxlan` and `path-selection` (default). |
 | `wan_virtual_topologies` | ✅ | to define the Policies and the VRF to policy mappings. |
 | `wan_path_groups` | ✅ | to define the list of path-groups in the network. |
 | `wan_carriers` | ✅ | to define the list of carriers in the network, each carrier is assigned to a path-group. |
@@ -119,12 +118,19 @@ The following table list the `eos_designs` top level keys used for WAN and how t
 | `wan_stun_dtls_disable` | ✅ | disable dTLS for STUN for instance for lab. (**NOT** recommended in production). |
 | `application_classification` | ✅ | to define the specific traffic classification required for the WAN if any. |
 | `cv_pathfinder_internet_exit_policies` | ✅ | to define the internet-exit policies. |
-| `wan_route_servers` | ✘| Indicate to which WAN route servers the WAN router should connect to. This key is also used to tell every WAN Route Reflectors with which other RRs it should peer with. |
-| `ipv4_acls` | ✘| List of IPv4 access-lists to be assigned to WAN interfaces. |
+| `wan_route_servers` | ✘ | Indicate to which WAN route servers the WAN router should connect to. This key is also used to tell every WAN Route Reflectors with which other RRs it should peer with. |
+| `ipv4_acls` | ✘ | List of IPv4 access-lists to be assigned to WAN interfaces. |
 
 Additionally, following keys must be set for the WAN route servers for the connectivity to work:
 
 - `bgp_peer_groups.wan_overlay_peers.listen_range_prefixes`: To set the ranges of IP address from which to expect BGP peerings for the WAN. Include the VTEP ranges for all routers connecting to this patfinder.
+
+!!! warning
+
+    When configuring a password on the `wan_overlay_peers` BGP peer group,
+    it may also be required to set a password for the `wan_rr_overlay_peers` BGP peer group.
+    This is required in the case where one or more pathfinders use the same VTEP IP range as the edge routers.
+    If the password is not set, the static BGP peerings between Pathfinders may not come up.
 
 #### WAN mode
 
@@ -139,6 +145,24 @@ By default the mode is set to `cv-pathfinder` and can be changed using:
 ---
 wan_mode: autovpn | cv-pathfinder # default: cv-pathfinder
 ```
+
+#### WAN encapsulation
+
+BGP peerings for the WAN can use two different encapsulation for EVPN address family:
+
+- path-selection
+- vxlan
+
+By default the mode is set to `path-selection` and can be changed using:
+
+```yaml
+---
+wan_encapsulaton: vxlan | path-selection # default: path-selection
+```
+
+!!! note
+
+    All routers participating to the WAN _must_ have the same encapsulation defined.
 
 #### WAN node_types
 
@@ -172,7 +196,7 @@ However, if the WAN route servers are in a different inventory, it is then neces
 
 #### WAN STUN handling
 
-WAN STUN connections are configured by default authenticated and secured with DTLS by default. A security profile is configured with an hardcoded root certificate and matching a certificate `<profile_name>.crt` and  key `<profile_name>.key`:
+WAN STUN connections are configured by default authenticated and secured with DTLS by default. A security profile is configured with an hardcoded root certificate and matching a certificate `<profile_name>.crt` and key `<profile_name>.key`:
 
 ```eos
 management security
@@ -186,7 +210,7 @@ These values can be overwritten using `custom_structured_configuration`.
 
 This configuration requires certificates to be distributed on the WAN devices to be able to authenticate themselves:
 
-- For CV Pathinder deployments,  CloudVision will automatically generate and deploy the certificates on the devices once AVD configs and metadata have been pushed.
+- For CV Pathinder deployments, CloudVision will automatically generate and deploy the certificates on the devices once AVD configs and metadata have been pushed.
 - For AutoVPN, the certificates must be generated and deployed to the devices for the STUN connections to work.
 
 !!! Danger "Disabling STUN"
@@ -231,6 +255,7 @@ cv_pathfinder_regions:
 ```
 
 !!! Note
+
     Site IDs and names must be unique per region.
 
 And then for each `wan_router`:
@@ -311,11 +336,31 @@ wan_carriers:
 ### Flow tracking
 
 For scalabilty reasons, flow-tracking is enabled only on `Dps1` interface by default.
-It can be added on WAN and LAN interfaces using `custom_structured_configuration`.
+It can be added on WAN and LAN interfaces using the appropriate combination of `fabric_flow_tracking` and `flow_tracking_settings`, the `flow_tracking` key in various places in the schema or `custom_structured_configuration`.
+
+Example to enable flow tracking on a WAN interface:
+
+```yaml
+wan_router:
+  node_groups:
+    - group: Site511
+      cv_pathfinder_region: AVD_Land_East
+      cv_pathfinder_site: Site511
+      nodes:
+        - name: cv-pathfinder-edge
+          id: 1
+          l3_interfaces:
+            - name: Ethernet1
+              wan_carrier: ATT
+              wan_circuit_id: 666
+              ip_address: dhcp
+              flow_tracking:
+                enabled: true
+```
 
 ### WAN interfaces
 
-A WAN interface in AVD is defined under the node settings under the `l3_interfaces` list. To be considered as a WAN interface by AVD, the `l3_interface` must have the `wan_carrier` key defined (which will allow to detect the path-group thanks to the carrier to path-group mapping). The `wan_circuit_id` is optional and used on CVaaS to provide more information in the visualization as well as in the AVD generated interface description. Finally the key `connected_to_pathfinder` allows to disable the static peering configuration on a given path-group.
+A WAN interface in AVD is defined under the node settings either under the `l3_interfaces` or the `l3_port_channels` list. To be considered as a WAN interface by AVD, an `l3_interface` or `l3_port_channel` must have the `wan_carrier` key defined (which will allow to detect the path-group thanks to the carrier to path-group mapping). The `wan_circuit_id` is optional and used on CVaaS to provide more information in the visualization as well as in the AVD generated interface description. The `receive_bandwidth` and `transmit_bandwidth` fields are currently only used for visualization on CVaaS. Finally the key `connected_to_pathfinder` allows to disable the static peering configuration on a given path-group.
 
 !!! Danger
 
@@ -344,6 +389,8 @@ wan_router:
             ipv4_acl_in: TEST-IPV4-ACL-WITH-IP-FIELDS-IN # (3)!
             ipv4_acl_out: TEST-IPV4-ACL-WITH-IP-FIELDS-OUT # (3)!
             dhcp_accept_default_route: true
+            receive_bandwidth: 10000 # (5)!
+            transmit_bandwidth: 1000 # (5)!
             ip_address: dhcp
             dhcp_ip: 7.7.7.7
           - name: Ethernet2
@@ -353,16 +400,41 @@ wan_router:
             peer_ip: 172.16.5.4
             static_routes:
               - prefix: 172.16.0.0/16
-            connected_to_pathfinder: False
+            connected_to_pathfinder: false
+            # Configure BGP peering with peer
+            bgp:
+              peer_as: 65042
+              ipv4_prefix_list_in: ALLOW-DEFAULT # (4)!
           # This is NOT a WAN interface
           - name: Ethernet3
             ip_address: 172.20.20.20/31
+        l3_port_channels:
+          # This is a WAN interface because `wan_carrier` is defined
+          - name: Port-Channel1
+            mode: active
+            peer: peer4
+            peer_interface: Port-Channel12
+            wan_carrier: ISP-3
+            ipv4_acl_in: TEST-IPV4-ACL-WITH-IP-FIELDS-IN
+            ipv4_acl_out: TEST-IPV4-ACL-WITH-IP-FIELDS-OUT
+            dhcp_accept_default_route: true
+            ip_address: dhcp
+            dhcp_ip: 42.42.42.42
+            member_interfaces:
+              - name: Ethernet4
+              - name: Ethernet5
+
+ipv4_prefix_list_catalog:
+  - name: ALLOW-DEFAULT
+    sequence_numbers:
+      - sequence: 10
 ```
 
 1. `peer` and `peer_interface` are optionals and used for description.
 2. `wan_circuit_id` is optional and used for description.
-3. Configure IPv4 ACLs in and out for the L3 interface. The access lists must
-    be defined under `ipv4_acls` top level key.
+3. Configure IPv4 ACLs in and out for the L3 interface. The access lists must be defined under `ipv4_acls` top level key.
+4. For BGP peering for WAN interfaces, the `ipv4_prefix_list_in` is mandatory for security reaasons. It is defined in the `ipv4_prefix_list_catalog`.
+5. The maximum bandwidths for the circuit in Mbps. This bandwidth is used in CloudVision to visualize circuit utilization and to generate events.
 
 ### WAN policies
 
@@ -371,7 +443,7 @@ The policies definition works as follow:
 - The policies are defined under `wan_virtual_topologies.policies`. For AutoVPN mode, the policies are configured under `router path-selection`, for CV Pathfinder, they are configured under `router adaptive-virtual-topology`.
 - A policy is composed of a list of `application_virtual_topologies` and one `default_virtual_topology`.
 - The `application_virtual_topologies` entries and the `default_virtual_topology` key are used to create the policy match statement, the AVT profile (when `wan_mode` is CV Pathfinder) and the load balancing policy.
-- The `default_virtual_topology` is used as the default match in the policy.  To prevent configuring it, the `drop_unmatched` boolean must be set to `true` otherwise, at least one `path-group` must be configured or AVD will raise an error.
+- The `default_virtual_topology` is used as the default match in the policy. To prevent configuring it, the `drop_unmatched` boolean must be set to `true` otherwise, at least one `path-group` must be configured or AVD will raise an error.
 - Policies are assigned to VRFs using the list `wan_virtual_topologies.vrfs`. A policy can be reused in multiple VRFs.
 - If no policy is assigned for the `default` VRF policy, AVD auto generates one with one `default_virtual_topology` entry configured to use all available local path-groups.
 - For the policy defined for VRF `default` (or the auto-generared one), an extra match statement is injected in the policy to match the traffic towards the Pathfinders or AutoVPN RRs, the name of the application-profile is hardcoded as `APP-PROFILE-CONTROL-PLANE`. A special policy is created by appending `-WITH-CP` at the end of the targeted policy name.
@@ -380,13 +452,13 @@ The policies definition works as follow:
 ```yaml
 wan_virtual_topologies:
   vrfs:
-    - name: PROD  # (1)!
+    - name: PROD # (1)!
       policy: PROD-AVT-POLICY
       wan_vni: 42
     - name: default # (2)!
       wan_vni: 1
   policies:
-    - name: PROD-AVT-POLICY  # (3)!
+    - name: PROD-AVT-POLICY # (3)!
       default_virtual_topology: # (4)!
         path_groups:
           - names: [INET]
@@ -426,8 +498,7 @@ wan_virtual_topologies:
 1. Assign the `PROD-AVT-POLICY` to the `PROD` VRF, multiple VRFs can use the same policy.
 2. VRF `default` will use the AVD auto-generated `DEFAULT-POLICY` as no policy is set.
 3. Define the `PROD-AVT-POLICY`
-4. `default_virtual_topology` is used to configure the default match in the policy.
-    In this case, default traffic will use INET path-group first and MPLS as backup.
+4. `default_virtual_topology` is used to configure the default match in the policy. In this case, default traffic will use INET path-group first and MPLS as backup.
 5. This list element configures the policy to apply to traffic the `VOICE` application profile.
    This block of configuration will configure the Load Balance policy, the match statement in the policy (in `router path-selection` for AutoVPN or `router adaptive-virtual-topology` for CV-Pathfinder) and for CV-Pathfinder, the AVT profile.
    The application profile must be defined under `application_classification.application_profiles`.
@@ -471,7 +542,7 @@ cv_pathfinder_internet_exit_policies:
     type: zscaler
     # [...] type specific options
   - name: ZSCALER-EXIT-POLICY-2
-    fallback_to_system_default: False
+    fallback_to_system_default: false
     type: zscaler
     # [...] type specific options
   - name: DIRECT-EXIT-POLICY-1
@@ -479,7 +550,7 @@ cv_pathfinder_internet_exit_policies:
     # [...] type specific options
 ```
 
-An Application Virtual Topology policy is composed of multiple profiles.  An AVT profile can be assigned an Internet-policy as follow:
+An Application Virtual Topology policy is composed of multiple profiles. An AVT profile can be assigned an Internet-policy as follow:
 
 ```yaml
 wan_virtual_topologies:
@@ -578,16 +649,12 @@ interface Ethernet3
 An internet-exit policy of type `zscaler` leverages the following AVD data model to generate the target configuration.
 
 AVD supports up to three tunnels (primary, secondary, tertiary).
-
-The target is for this data to be retrieved from Cloudvision through a lookup plugin for each device to determine what are the best tunnel(s) to use for a given location.
+AVD `eos_designs` will fetch Zscaler integration information from Cloudvision.
 
 ```yaml
-# Variables used by the lookup plugin to connect to Cloudvision
-cv_server: <cloudvision_ip>
-cv_token: <cloudvision_token>
-
-# Lookup plugin usage
-zscaler_endpoints: "{{ lookup('arista.avd.cv_zscaler_endpoints') }}"
+# Variables used by eos_designs to connect to Cloudvision
+cv_server: <hostname or IP address of CloudVision host. Ex. "www.arista.io" for CVaaS>
+cv_token: <service account token as defined on CloudVision. This value should be using Ansible Vault>
 ```
 
 For each `zscaler` type Internet-policies, AVD uses the `cv_pathinfder_internet_exit_policies[name=<POLICY-NAME>].zscaler` dictionary and the `zscaler_endpoints` in combination with the `l3_interfaces.cv_pathfinder_internet_exit.policies[name=<POLICY-NAME>].tunnel_interface_numbers` to generate the internet-exit configuration.
@@ -595,21 +662,21 @@ For each `zscaler` type Internet-policies, AVD uses the `cv_pathinfder_internet_
 The `cv_pathinfder_internet_exit_policies[name=<POLICY-NAME>].zscaler` dictionary has additonnal options to configure the policy parameters shared with Zscaler through Cloudvision.
 
 ```yaml
-    # PREVIEW: These keys are in preview mode.
-    cv_pathfinder_internet_exit_policies:
-      - name: <str; required; unique>
-        type: <str; "zscaler"; required>
-        fallback_to_system_default: <bool; default=True>
-        zscaler:
-          ipsec_key_salt: <str; required>
-          domain_name: <str; required>
-          encrypt_traffic: <bool; default=True>
-          download_bandwidth: <int>
-          upload_bandwidth: <int>
-          firewall:
-            enabled: <bool; default=False>
-            ips: <bool; default=False>
-          acceptable_use_policy: <bool; default=False>
+# PREVIEW: These keys are in preview mode.
+cv_pathfinder_internet_exit_policies:
+  - name: <str; required; unique>
+    type: <str; "zscaler"; required>
+    fallback_to_system_default: <bool; default=True>
+    zscaler:
+      ipsec_key_salt: <str; required>
+      domain_name: <str; required>
+      encrypt_traffic: <bool; default=True>
+      download_bandwidth: <int>
+      upload_bandwidth: <int>
+      firewall:
+        enabled: <bool; default=False>
+        ips: <bool; default=False>
+      acceptable_use_policy: <bool; default=False>
 ```
 
 !!! tip "IPsec"
@@ -629,24 +696,133 @@ The following LAN scenarios are supported:
 
 - Single Router L3 EBGP LAN
 - Single Router L2 LAN
-
-The following LAN scenarios are in PREVIEW:
-
 - Dual Router L3 EBGP LAN with HA
+- Dual Router using one directed connected HA interface
+- [PREVIEW] - Single Router EVPN Gateway
+
+Some design points:
+
+- The Site of Origin (SOO) extended community is configured as `<router_id>:<site_id>`
+  - site id is unique per zone (only a default zone supported today).
+  - for HA site, the SOO is set as `<router1_id>:<site_id>` where `router1` is the first router defined in the group.
+- HA is not supported for more than two routers for CV Pathfinders.
+- The routes to be advertised towards the WAN must be marked with the site SOO.
+  - The connected routes and static routes are marked with the SOO when
+    redistributed in BGP
+    - the routes redistributed into BGP via the route-map `RM-CONN-2-BGP` are tagged with the SOO.
+    - the routes redistributed into BGP via the route-map `RM-STATIC-2-BGP` are tagged with the SOO.
+  - the routes received from LAN are marked with the SOO when received from the LAN over BGP or when redistributed into BGP from the LAN protocol.
+    - For other connection (e.g. L3 interface with a BGP peering, the user must mark them with the SOO).
+- For VRF default, there is a requirement to explicitly redistribute the routes for EVPN. The `RM-EVPN-EXPORT-VRF-DEFAULT` is configured to export the routes tagged with the SOO.
+- Routes received from the WAN with the local SOO are dropped.
+- Routes received from the WAN are redistributed / advertised towards the LAN.
+- For HA, an iBGP session using EVPN Gateway is used to share the routes from one peer to the other.
+  - WAN, LAN and local static routes are sent to the HA peer to cater for various failure scenarii.
+  - The routes received from the HA peer are made less preferred than routes received from the LAN or from the WAN.
+
+The following diagram represents the various redistribution occurring for default
+and non-default VRFs in the common case. This indicates the route-maps on each
+interaction to help understand how everything fits together. This diagram
+represents the common scenario for a single router, without any LAN. It will be
+reused when adding LAN protocols to help understand the changes.
+
+<!-- ![Figure 1: WAN LAN Common design](../../../../../../docs/_media/wan_lan_common.png) -->
+
+<div style="text-align:center">
+  <img src="../../../../../../../docs/_media/wan_lan_common.png" alt="WAN LAN Common design"/>
+</div>
+
+#### LAN HA common configuration
+
+EOS (and hence AVD) supports maximum 2 routers for HA. To be considered as HA nodes, they need to belong to the same node_group as below:
+
+```yaml
+wan_router:
+  node_groups:
+    - group: Site42
+      cv_pathfinder_region: AVD_Land_West
+      cv_pathfinder_site: Site42
+      wan_ha:
+      enabled: true
+      nodes:
+        - name: node1
+          id: 1
+          [...]
+        - name: node2
+          id: 1
+          [...]
+```
+
+To establish LAN HA the requirements are the following:
+
+- The HA tunnels can be established only in the default VRF (EOS limitation)
+- The HA interfaces must be able to establish IPSec tunnels between each other. This implies that if the interfaces are on different subnet, the LAN must be able to route traffic between each interface.
+- EVPN Gateway is used to exchange the routes between the HA peers configured as follow - the advantage is that it caters for all VRFs and the default VRF export route-map is still valid.
+
+By default, AVD uses the uplinks as the HA links. It is possible to override this by setting a list of interfaces to be used as the *Direct HA links*:
+
+```yaml
+wan_router:
+  node_groups:
+    - group: Site42
+      cv_pathfinder_region: AVD_Land_West
+      cv_pathfinder_site: Site42
+      wan_ha:
+        enabled: true
+        ha_interfaces: [Ethernet52] # (1)!
+        ha_ipv4_pool: 10.10.10.0/24 # (2)!
+```
+
+1. Select the interface for HA, it can either be a way to select one or more interface(s) for Direct HA, or to filter some of the uplink HA interfaces.
+2. Prefix to use to allocate the IP address for the direct HA link.
+
+!!! warning
+
+    For direct HA, AVD will configure a port-channel by default.
+    <span style="color:red">This feature was introduced recently in EOS and may not be supported on your version.</span>
+
+    If it is the case, only one interface can be used for Direct HA, and the port-channel creation can be disabled using `wan_ha.use_port_channel_for_direct_ha: false`.
+
+    It is *not* possible to use multiple direct HA links while disabling the port-channel.
+
+From a configuration standpoint:
+
+- The routes sent to the HA peers are applied a route-map to make the routes less preferred than the one received from the WAN or from the LAN
+  - The sent routes are set with a local-preference of 75 if they originate directly from the local HA peer or 50 if they are received from the WAN.
+- On the other end, all the received routes are tagged to be able to influence the redistribution towards the LAN of the HA routes when required. A tag of 50 is used to mark the routes received from the HA peer.
+- The two levels of Local Preference exist to be able to always select the remote VTEP in a scenario where an HA site receives routes from another HA site:
+  - The routes received directly from a given remote VTEP are received with LP 100
+  - The same routes received from the HA peer of the remote VTEP are received with LP 75
+  - The same routes received from the local HA peer that went through the LAN are received with LP 50
+  - This hierarchy allows selecting the correct best destination VTEP first and avoid decap and re-encap at EVPN level. Then DPS kicks in and can select a path that goes over the local or remote HA peer but targeting the correct best VTEP.
+
+The following diagram represents this scenario:
+
+<!-- ![Figure 2: WAN Direct HA](../../../../../../docs/_media/wan_direct_ha_no_lan.png) -->
+
+<div style="text-align:center">
+  <img src="../../../../../../../docs/_media/wan_direct_ha_no_lan.png" alt="WAN Direct HA"/>
+</div>
 
 #### EBGP LAN
 
-- the Site of Origin (SoO) extended community is configured as <router_id>:<site_id>
-    note: site id is unique per zone (only a default zone supported today).
 - the routes redistributed into BGP via the route-map `RM-CONN-2-BGP` are tagged with the SoO.
-- the Underlay peer group (towards the LAN) is configured with two route-maps reused from existing designed but configured differently
-  - one outbound route-map `RM-BGP-UNDERLAY-PEERS-OUT`:
-    - advertised the local routes tagged with the SoO extended community.
-    - advertised the routes received from iBGP (WAN) towards the LAN also marked with the SoO community.
+- the Underlay peer group (towards the LAN) is configured with one inbound route-map
   - one inbound route-map `RM-BGP-UNDERLAY-PEERS-IN`:
-    - deny routes received from LAN that already contain the WAN AS in the path.
     - accept routes coming from the LAN and set the SoO extended community on them.
-- For VRF default, there is a requirement to explicitly redistribute the routes for EVPN. The `RM-EVPN-EXPORT-VRF-DEFAULT` is configured to export the routes tagged with the SoO.
+
+!!! warning
+
+    - the Underlay peer group (towards the LAN) is not configured with any outbound route-map.
+    - For VRF default, there is a requirement to explicitly redistribute the routes for EVPN. The `RM-EVPN-EXPORT-VRF-DEFAULT` is configured to export the routes tagged with the SoO.
+
+The following diagram shows the additional route-maps configured to support eBGP on LAN:
+
+<!-- ![Figure 3: WAN eBGP LAN Single Router](../../../../../../docs/_media/wan_ebgp_lan_single_router.png) -->
+
+<div style="text-align:center">
+  <img src="../../../../../../../docs/_media/wan_ebgp_lan_single_router.png" alt="WAN eBGP LAN Single Router"/>
+</div>
 
 ##### HA (PREVIEW)
 
@@ -656,20 +832,75 @@ The following LAN scenarios are in PREVIEW:
 
 for eBGP LAN routing protocol the following is done to enable HA:
 
-- the uplink interfaces are used as HA interfaces.
+- the uplink interfaces are used as HA interfaces by default.
 - the subnets of the HA interfaces are redistributed to BGP via the `RM-CONN-2-BGP` route-map
-BGP underlay peer group is configured with `allowas-in 1` to be able to learn the HA peer uplink interface subnet over the LAN as well as learning WAN routes from other sites (as backup in case all WAN links are lost).
-- the Underlay peer group is configured with two route-maps
-  - one inbound route-map `RM-UNDERLAY-PEERS-IN`
-    - Match HA peer's uplink subnets (not marked) to be able to form HA tunnel (not exported to EVPN).
-    - Match HA peer's originated prefixes, set longer AS path and mark with SoO to export to EVPN. These will be used as backup from other sites to destinations on HA Peer Router in case all WAN connections on Peer are down.
-    - Match all WAN routes using AS path and set no-advertise community. This will be used as backup routes to the WAN in case this router looses all WAN connections.
-    - Match anything else (LAN prefixes) and mark with the SoO `<bgp_as>:<wan_site_id>` to export to EVPN.
-  - one outbound route-map `RM-UNDERLAY-PEERS-OUT`
-    - allowing local routes marked with SoO (routes/interfaces defined via tenants + router-id)
-    - allowing subnets of uplink interfaces.
-    - allow all routes learned from iBGP (WAN)
-    - Implicitly denying other routes which could be learned from BGP towards a WAN provider or redistributed without marking with SoO.
+- BGP underlay peer group is configured with `allowas-in 1` to be able to learn the HA peer uplink interface subnet over the LAN as well as learning WAN routes from other sites (as backup in case all WAN links are lost).
+- the Underlay peer group is configured with one inbound route-map
+  - one inbound route-map `RM-BGP-UNDERLAY-PEERS-IN`
+    - Match HA peer's uplink subnets to be able to form HA tunnel (not exported to EVPN).
+    - Deny any other route from the HA peer as they are already shared over EVPN.
+    - Match anything else (LAN prefixes) and mark with the SOO `<bgp_as>:<wan_site_id>` to export to EVPN.
+
+This is described in the following diagram:
+
+<!-- ![Figure 4: WAN eBGP LAN with HA](../../../../../../docs/_media/wan_ebgp_lan_ha.png) -->
+
+<div style="text-align:center">
+  <img src="../../../../../../../docs/_media/wan_ebgp_lan_ha.png" alt="WAN eBGP LAN with HA"/>
+</div>
+
+##### HA with Direct Link (PREVIEW)
+
+In the situation where the LAN is EBGP but HA is configured over a direct link, there is no peering with the HA peer required via the LAN and the configuration is simplified as follow:
+
+<!-- ![Figure 5: WAN eBGP LAN with Direct HA link](../../../../../../docs/_media/wan_ebgp_lan_ha_direct.png) -->
+
+<div style="text-align:center">
+  <img src="../../../../../../../docs/_media/wan_ebgp_lan_ha_direct.png" alt="WAN eBGP LAN with Direct HA link"/>
+</div>
+
+!!! warning
+
+    For direct HA, AVD will configure a port-channel by default.
+    <span style="color:red">This feature was introduced recently in EOS and may not be supported on your version.</span>
+
+    If it is the case, only one interface can be used for Direct HA, and the port-channel creation can be disabled using `wan_ha.use_port_channel_for_direct_ha: false`.
+
+    It is *not* possible to use multiple direct HA links while disabling the port-channel.
+
+#### EVPN Gateway LAN (PREVIEW)
+
+- the LAN routes are received via EVPN
+- Enabling the gateway requires to configure:
+  - `wan_use_evpn_node_settings_for_lan: true`
+  - `overlay_routing_protocol: ebgp` for the WAN router
+  - `evpn_role: client` for the WAN router
+  - an EVPN route server should be defined, e.g. using `evpn_route_servers` settings.
+- When all the conditions are met, the EVPN Gateway using DPS Interconnect is enabled and the following configuration is added to the WAN router:
+
+```shell
+router adaptive-virtual-topology
+   topology role edge gateway vxlan # (1)!
+   [...]
+[...]
+router bgp <AS>
+   ...
+   !
+   address-family evpn
+      neighbor WAN_RR activate
+      neighbor WAN_RR domain remote
+      neighbor WAN_RR encapsulation path-selection
+      neighbor DC1_RR activate
+      neighbor default next-hop-self received-evpn-routes route-type ip-prefix inter-domain
+```
+
+1. Notice the gateway VXLAN
+
+!!! warning
+
+    TODO: Add a drawing.
+
+    TOI: https://www.arista.com/en/support/toi/eos-4-32-2f/20422-l3-evpn-dci-gateway-using-dps-interconnect
 
 #### OSPF LAN (NOT SUPPORTED)
 
@@ -684,7 +915,7 @@ BGP underlay peer group is configured with `allowas-in 1` to be able to learn th
 
 The HA tunnel will come up properly today but route redistribution will be missing so it is not usable.
 
-- the HA interface(s) is(are) the uplink interface(s) which are automatically included in  OSPF.
+- the HA interface(s) is(are) the uplink interface(s) which are automatically included in OSPF.
 
 #### L2 LAN
 
@@ -727,7 +958,7 @@ The tags will only be generated when `wan_mode` is set to `cv-pathfinder`.
 As described in the design principles, the goal is to be able to distribute the
 WAN routers in separate Ansible inventories.
 
-When leveraging multiple inventories, the arista.avd collection provide capabilities to create [global variables](../../../../docs/plugins/Vars_plugins/global_vars.md).
+When leveraging multiple inventories, the arista.avd collection provide capabilities to create [global variables](../../../../../../../docs/plugins/Vars_plugins/global_vars.md).
 The following example will be leveraging this capability to share required WAN variables across multiple inventories.
 
 This example contains contains two sites, SITE1 and SITE2 and a dedicate inventory for pathfinder nodes.
@@ -859,3 +1090,22 @@ wan_virtual_topologies:
           - names: [internet]
             preference: alternate
 ```
+
+### WAN Validation
+
+`eos_validate_state` is being enriched to support new tests for WAN designs. The tests listed below are validating WAN designs.
+
+| AVD Test Class | ANTA Test Class | Description |
+| -------------- | --------------- | ----------- |
+| AvdTestInterfacesState | VerifyInterfacesStatus | Validate the DPS interface status. |
+| AvdTestBGP | VerifyBGPSpecificPeers | Validate the state of BGP Address Family sessions, including `Path-Selection` for AutoVPN, `Link-State` and `IPv4/IPv6 SR-TE` for CV Pathfinder. |
+| AvdTestIPSecurity | VerifySpecificIPSecConn | Validate the establishment of IP security connections for each static peer under the `router path-selection` section of the configuration. |
+| AvdTestStun | VerifyStunClient | Validate the presence of a STUN client translation for a given source IPv4 address and port. The list of expected translations for each device is built by searching local interfaces in each path-group. |
+| AvdTestDpsReachability | VerifyReachability | Validate DPS reachability between devices. |
+| AvdTestAvtPath | VerifyAVTSpecificPath | Validate that the status is active and the type is direct for an Adaptive Virtual Topology (AVT) path in a specified VRF for the static peers. |
+| AvdTestAvtRole | VerifyAVTRole | Validate the Adaptive Virtual Topology (AVT) role of a device. |
+
+!!! note
+
+    More WAN-related tests are available directly in ANTA and can be added using custom catalogs.
+    They will be progressively added to `eos_validate_state`.

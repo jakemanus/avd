@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 Arista Networks, Inc.
+# Copyright (c) 2023-2025 Arista Networks, Inc.
 # Use of this source code is governed by the Apache License 2.0
 # that can be found in the LICENSE file.
 from __future__ import annotations
@@ -11,7 +11,8 @@ from .constants import RESULTS_MAPPING, STATS_MAPPING
 
 
 class ResultsManager:
-    """Manages and stores test results from eos_validate_state running ANTA.
+    """
+    Manages and stores test results from eos_validate_state running ANTA.
 
     This class processes individual test result and maintains statistics like total tests passed, failed, and skipped.
 
@@ -19,7 +20,8 @@ class ResultsManager:
     """
 
     def __init__(self, *, only_failed_tests: bool = True) -> None:
-        """Initialize the ResultsManager with default values and stats counters set to 0.
+        """
+        Initialize the ResultsManager with default values and stats counters set to 0.
 
         The class uses defaultdict to automatically initialize statistics for devices under test (DUT) and test categories.
         This ensures that accessing a stat for a new DUT or category will automatically create an entry with initial
@@ -58,7 +60,8 @@ class ResultsManager:
         self.only_failed_tests = only_failed_tests
 
     def _parse_result(self, result: dict) -> dict:
-        """Parse a single test result and converts it into a standardized format for the reports.
+        """
+        Parse a single test result and converts it into a standardized format for the reports.
 
         Args:
         ----
@@ -90,7 +93,8 @@ class ResultsManager:
         }
 
     def _increment_stats(self, test_status: str, dut: str, categories: list[str]) -> None:
-        """Increment test statistics based on the test result.
+        """
+        Increment test statistics based on the test result.
 
         Args:
         ----
@@ -111,7 +115,8 @@ class ResultsManager:
                 self.dut_stats[dut][stat].update(categories)
 
     def update_results(self, result: dict) -> None:
-        """Update the internal statistics and test results based on the given test result.
+        """
+        Update the internal statistics and test results based on the given test result.
 
         Args:
         ----
@@ -137,9 +142,10 @@ class ResultsManager:
 
     @property
     def total_tests(self) -> int:
-        """Calculates the total number of tests processed.
+        """
+        Calculates the total number of tests processed.
 
-        Returns
+        Returns:
         -------
             int: The total number of tests.
         """
@@ -147,9 +153,10 @@ class ResultsManager:
 
     @property
     def sorted_category_stats(self) -> dict:
-        """A property that returns the category_stats dictionary sorted by key name.
+        """
+        A property that returns the category_stats dictionary sorted by key name.
 
-        Returns
+        Returns:
         -------
             dict: The sorted category_stats dictionary.
         """

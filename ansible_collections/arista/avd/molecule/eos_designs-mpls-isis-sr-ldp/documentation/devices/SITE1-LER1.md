@@ -5,6 +5,8 @@
 - [Management](#management)
   - [Management Interfaces](#management-interfaces)
   - [Management API HTTP](#management-api-http)
+- [Authentication](#authentication)
+  - [Enable Password](#enable-password)
 - [Spanning Tree](#spanning-tree)
   - [Spanning Tree Summary](#spanning-tree-summary)
   - [Spanning Tree Device Configuration](#spanning-tree-device-configuration)
@@ -33,6 +35,7 @@
 - [MPLS](#mpls)
   - [MPLS and LDP](#mpls-and-ldp)
   - [MPLS Interfaces](#mpls-interfaces)
+  - [MPLS Device Configuration](#mpls-device-configuration)
 - [Patch Panel](#patch-panel)
   - [Patch Panel Summary](#patch-panel-summary)
   - [Patch Panel Device Configuration](#patch-panel-device-configuration)
@@ -53,20 +56,20 @@
 
 | Management Interface | Description | Type | VRF | IP Address | Gateway |
 | -------------------- | ----------- | ---- | --- | ---------- | ------- |
-| Management1 | oob_management | oob | MGMT | 192.168.200.105/24 | 192.168.200.5 |
+| Management1 | OOB_MANAGEMENT | oob | MGMT | 192.168.200.105/24 | 192.168.200.5 |
 
 ##### IPv6
 
 | Management Interface | Description | Type | VRF | IPv6 Address | IPv6 Gateway |
 | -------------------- | ----------- | ---- | --- | ------------ | ------------ |
-| Management1 | oob_management | oob | MGMT | - | - |
+| Management1 | OOB_MANAGEMENT | oob | MGMT | - | - |
 
 #### Management Interfaces Device Configuration
 
 ```eos
 !
 interface Management1
-   description oob_management
+   description OOB_MANAGEMENT
    no shutdown
    vrf MGMT
    ip address 192.168.200.105/24
@@ -76,9 +79,9 @@ interface Management1
 
 #### Management API HTTP Summary
 
-| HTTP | HTTPS | Default Services |
-| ---- | ----- | ---------------- |
-| False | True | - |
+| HTTP | HTTPS | UNIX-Socket | Default Services |
+| ---- | ----- | ----------- | ---------------- |
+| False | True | - | - |
 
 #### Management API VRF Access
 
@@ -97,6 +100,12 @@ management api http-commands
    vrf MGMT
       no shutdown
 ```
+
+## Authentication
+
+### Enable Password
+
+Enable password has been disabled
 
 ## Spanning Tree
 
@@ -172,29 +181,36 @@ vlan 2020
 
 ##### Encapsulation Dot1q Interfaces
 
-| Interface | Description | Type | Vlan ID | Dot1q VLAN Tag |
-| --------- | ----------- | -----| ------- | -------------- |
-| Ethernet6.10 | TENANT_B_SITE_3_INTRA_L3VPN | l3dot1q | - | 10 |
+| Interface | Description | Vlan ID | Dot1q VLAN Tag | Dot1q Inner VLAN Tag |
+| --------- | ----------- | ------- | -------------- | -------------------- |
+| Ethernet6.10 | TENANT_B_SITE_3_INTRA_L3VPN | - | 10 | - |
+
+##### Flexible Encapsulation Interfaces
+
+| Interface | Description | Vlan ID | Client Encapsulation | Client Inner Encapsulation | Client VLAN | Client Outer VLAN Tag | Client Inner VLAN Tag | Network Encapsulation | Network Inner Encapsulation | Network VLAN | Network Outer VLAN Tag | Network Inner VLAN Tag |
+| --------- | ----------- | ------- | --------------- | --------------------- | ----------- | --------------------- | --------------------- | ---------------- | ---------------------- |------------ | ---------------------- | ---------------------- |
+| Ethernet9.100 | - | - | dot1q | - | 100 | - | - | client | - | - | - | - |
+| Ethernet9.101 | - | - | dot1q | - | 101 | - | - | client | - | - | - | - |
 
 ##### IPv4
 
-| Interface | Description | Type | Channel Group | IP Address | VRF |  MTU | Shutdown | ACL In | ACL Out |
-| --------- | ----------- | -----| ------------- | ---------- | ----| ---- | -------- | ------ | ------- |
-| Ethernet1 | P2P_LINK_TO_SITE1-LSR1_Ethernet1 | routed | - | 100.64.48.0/31 | default | 9178 | False | - | - |
-| Ethernet2 | P2P_LINK_TO_SITE1-LER2_Ethernet2 | routed | - | 100.64.48.4/31 | default | 9178 | False | - | - |
-| Ethernet6.10 | TENANT_B_SITE_3_INTRA_L3VPN | l3dot1q | - | 123.1.1.0/31 | TENANT_B_INTRA | - | False | - | - |
+| Interface | Description | Channel Group | IP Address | VRF |  MTU | Shutdown | ACL In | ACL Out |
+| --------- | ----------- | ------------- | ---------- | ----| ---- | -------- | ------ | ------- |
+| Ethernet1 | P2P_SITE1-LSR1_Ethernet1 | - | 100.64.48.0/31 | default | 9178 | False | - | - |
+| Ethernet2 | P2P_SITE1-LER2_Ethernet2 | - | 100.64.48.4/31 | default | 9178 | False | - | - |
+| Ethernet6.10 | TENANT_B_SITE_3_INTRA_L3VPN | - | 10.123.1.0/31 | TENANT_B_INTRA | - | False | - | - |
 
 ##### IPv6
 
-| Interface | Description | Type | Channel Group | IPv6 Address | VRF | MTU | Shutdown | ND RA Disabled | Managed Config Flag | IPv6 ACL In | IPv6 ACL Out |
-| --------- | ----------- | ---- | --------------| ------------ | --- | --- | -------- | -------------- | -------------------| ----------- | ------------ |
-| Ethernet1 | P2P_LINK_TO_SITE1-LSR1_Ethernet1 | routed | - | - | default | 9178 | False | - | - | - | - |
-| Ethernet2 | P2P_LINK_TO_SITE1-LER2_Ethernet2 | routed | - | - | default | 9178 | False | - | - | - | - |
+| Interface | Description | Channel Group | IPv6 Address | VRF | MTU | Shutdown | ND RA Disabled | Managed Config Flag | IPv6 ACL In | IPv6 ACL Out |
+| --------- | ----------- | --------------| ------------ | --- | --- | -------- | -------------- | -------------------| ----------- | ------------ |
+| Ethernet1 | P2P_SITE1-LSR1_Ethernet1 | - | - | default | 9178 | False | - | - | - | - |
+| Ethernet2 | P2P_SITE1-LER2_Ethernet2 | - | - | default | 9178 | False | - | - | - | - |
 
 ##### ISIS
 
-| Interface | Channel Group | ISIS Instance | ISIS BFD | ISIS Metric | Mode | ISIS Circuit Type | Hello Padding | Authentication Mode |
-| --------- | ------------- | ------------- | -------- | ----------- | ---- | ----------------- | ------------- | ------------------- |
+| Interface | Channel Group | ISIS Instance | ISIS BFD | ISIS Metric | Mode | ISIS Circuit Type | Hello Padding | ISIS Authentication Mode |
+| --------- | ------------- | ------------- | -------- | ----------- | ---- | ----------------- | ------------- | ------------------------ |
 | Ethernet1 | - | CORE | - | 60 | point-to-point | level-2 | False | md5 |
 | Ethernet2 | - | CORE | - | 500 | point-to-point | level-2 | False | md5 |
 
@@ -203,7 +219,7 @@ vlan 2020
 ```eos
 !
 interface Ethernet1
-   description P2P_LINK_TO_SITE1-LSR1_Ethernet1
+   description P2P_SITE1-LSR1_Ethernet1
    no shutdown
    mtu 9178
    speed forced 40gfull
@@ -224,7 +240,7 @@ interface Ethernet1
 
 !
 interface Ethernet2
-   description P2P_LINK_TO_SITE1-LER2_Ethernet2
+   description P2P_SITE1-LER2_Ethernet2
    no shutdown
    mtu 9178
    speed forced 10000full
@@ -263,15 +279,31 @@ interface Ethernet6.10
    no shutdown
    encapsulation dot1q vlan 10
    vrf TENANT_B_INTRA
-   ip address 123.1.1.0/31
+   ip address 10.123.1.0/31
    ip ospf cost 10
    ip ospf network point-to-point
-   ip ospf area 0
+   ip ospf area 0.0.0.0
 !
 interface Ethernet8
-   description CPE_TENANT_A_SITE1_Ethernet1
+   description CPE_CPE_TENANT_A_SITE1_Ethernet1
    no shutdown
    channel-group 8 mode active
+!
+interface Ethernet9
+   no shutdown
+   no switchport
+!
+interface Ethernet9.100
+   no shutdown
+   encapsulation vlan
+      client dot1q 100 network client
+   storm-control broadcast level 10
+!
+interface Ethernet9.101
+   !! Test structured_config for Ethernet subinterface
+   no shutdown
+   encapsulation vlan
+      client dot1q 101 network client
 ```
 
 ### Port-Channel Interfaces
@@ -280,21 +312,21 @@ interface Ethernet8
 
 ##### L2
 
-| Interface | Description | Type | Mode | VLANs | Native VLAN | Trunk Group | LACP Fallback Timeout | LACP Fallback Mode | MLAG ID | EVPN ESI |
-| --------- | ----------- | ---- | ---- | ----- | ----------- | ------------| --------------------- | ------------------ | ------- | -------- |
+| Interface | Description | Mode | VLANs | Native VLAN | Trunk Group | LACP Fallback Timeout | LACP Fallback Mode | MLAG ID | EVPN ESI |
+| --------- | ----------- | ---- | ----- | ----------- | ------------| --------------------- | ------------------ | ------- | -------- |
 
 ##### Flexible Encapsulation Interfaces
 
-| Interface | Description | Type | Vlan ID | Client Unmatched | Client Dot1q VLAN | Client Dot1q Outer Tag | Client Dot1q Inner Tag | Network Retain Client Encapsulation | Network Dot1q VLAN | Network Dot1q Outer Tag | Network Dot1q Inner Tag |
-| --------- | ----------- | ---- | ------- | -----------------| ----------------- | ---------------------- | ---------------------- | ----------------------------------- | ------------------ | ----------------------- | ----------------------- |
-| Port-Channel3.1000 | - | l2dot1q | - | False | 1000 | - | - | True | - | - | - |
-| Port-Channel3.1001 | - | l2dot1q | - | False | 1001 | - | - | True | - | - | - |
-| Port-Channel3.1002 | - | l2dot1q | - | False | 1002 | - | - | True | - | - | - |
-| Port-Channel3.1003 | - | l2dot1q | - | False | 1003 | - | - | True | - | - | - |
-| Port-Channel3.1004 | - | l2dot1q | - | False | 1004 | - | - | True | - | - | - |
-| Port-Channel8.111 | - | l2dot1q | 111 | False | 111 | - | - | True | - | - | - |
-| Port-Channel8.222 | - | l2dot1q | 222 | False | 222 | - | - | True | - | - | - |
-| Port-Channel8.333 | - | l2dot1q | 434 | False | 333 | - | - | True | - | - | - |
+| Interface | Description | Vlan ID | Client Encapsulation | Client Inner Encapsulation | Client VLAN | Client Outer VLAN Tag | Client Inner VLAN Tag | Network Encapsulation | Network Inner Encapsulation | Network VLAN | Network Outer VLAN Tag | Network Inner VLAN Tag |
+| --------- | ----------- | ------- | --------------- | --------------------- | ----------- | --------------------- | --------------------- | ---------------- | ---------------------- | ------------ | ---------------------- | ---------------------- |
+| Port-Channel3.1000 | - | - | dot1q | - | 1000 | - | - | client | - | - | - | - |
+| Port-Channel3.1001 | - | - | dot1q | - | 1001 | - | - | client | - | - | - | - |
+| Port-Channel3.1002 | - | - | dot1q | - | 1002 | - | - | client | - | - | - | - |
+| Port-Channel3.1003 | - | - | dot1q | - | 1003 | - | - | client | - | - | - | - |
+| Port-Channel3.1004 | - | - | dot1q | - | 1004 | - | - | client | - | - | - | - |
+| Port-Channel8.111 | - | 111 | dot1q | - | 111 | - | - | client | - | - | - | - |
+| Port-Channel8.222 | - | 222 | dot1q | - | 222 | - | - | client | - | - | - | - |
+| Port-Channel8.333 | - | 434 | dot1q | - | 333 | - | - | client | - | - | - | - |
 
 ##### EVPN Multihoming
 
@@ -303,6 +335,10 @@ interface Ethernet8
 | Interface | Ethernet Segment Identifier | Multihoming Redundancy Mode | Route Target |
 | --------- | --------------------------- | --------------------------- | ------------ |
 | Port-Channel3 | 0000:0000:0102:0000:0034 | all-active | 01:02:00:00:00:34 |
+| Port-Channel8 | 0000:0000:0303:0202:0101 | all-active | 03:03:02:02:01:01 |
+| Port-Channel8.111 | 0000:0000:0303:0202:0111 | all-active | 03:03:02:02:01:11 |
+| Port-Channel8.222 | 0000:0000:0303:0202:0222 | all-active | 03:03:02:02:02:22 |
+| Port-Channel8.333 | 0000:0000:0303:0202:0333 | all-active | 03:03:02:02:03:33 |
 
 #### Port-Channel Interfaces Device Configuration
 
@@ -311,6 +347,7 @@ interface Ethernet8
 interface Port-Channel3
    no shutdown
    no switchport
+   !
    evpn ethernet-segment
       identifier 0000:0000:0102:0000:0034
       route-target import 01:02:00:00:00:34
@@ -318,48 +355,75 @@ interface Port-Channel3
 !
 interface Port-Channel3.1000
    no shutdown
+   !
    encapsulation vlan
       client dot1q 1000 network client
+   storm-control broadcast level 15
 !
 interface Port-Channel3.1001
    no shutdown
+   !
    encapsulation vlan
       client dot1q 1001 network client
 !
 interface Port-Channel3.1002
+   !! Test structured_config for Port-Channel subinterface
    no shutdown
+   !
    encapsulation vlan
       client dot1q 1002 network client
 !
 interface Port-Channel3.1003
    no shutdown
+   !
    encapsulation vlan
       client dot1q 1003 network client
 !
 interface Port-Channel3.1004
    no shutdown
+   !
    encapsulation vlan
       client dot1q 1004 network client
 !
 interface Port-Channel8
-   description CPE_TENANT_A_SITE1_EVPN-A-A-PortChannel
+   description CPE_CPE_TENANT_A_SITE1_EVPN-A-A-PortChannel
    no shutdown
    no switchport
+   !
+   evpn ethernet-segment
+      identifier 0000:0000:0303:0202:0101
+      route-target import 03:03:02:02:01:01
+   lacp system-id 0303.0202.0101
 !
 interface Port-Channel8.111
    vlan id 111
+   !
    encapsulation vlan
       client dot1q 111 network client
+   !
+   evpn ethernet-segment
+      identifier 0000:0000:0303:0202:0111
+      route-target import 03:03:02:02:01:11
 !
 interface Port-Channel8.222
    vlan id 222
+   !
    encapsulation vlan
       client dot1q 222 network client
+   !
+   evpn ethernet-segment
+      identifier 0000:0000:0303:0202:0222
+      route-target import 03:03:02:02:02:22
 !
 interface Port-Channel8.333
    vlan id 434
+   !
    encapsulation vlan
       client dot1q 333 network client
+   !
+   evpn ethernet-segment
+      identifier 0000:0000:0303:0202:0333
+      route-target import 03:03:02:02:03:33
 ```
 
 ### Loopback Interfaces
@@ -370,13 +434,13 @@ interface Port-Channel8.333
 
 | Interface | Description | VRF | IP Address |
 | --------- | ----------- | --- | ---------- |
-| Loopback0 | LSR_Router_ID | default | 100.70.0.5/32 |
+| Loopback0 | ROUTER_ID | default | 100.70.0.5/32 |
 
 ##### IPv6
 
 | Interface | Description | VRF | IPv6 Address |
 | --------- | ----------- | --- | ------------ |
-| Loopback0 | LSR_Router_ID | default | 2000:1234:ffff:ffff::5/128 |
+| Loopback0 | ROUTER_ID | default | 2000:1234:ffff:ffff::5/128 |
 
 ##### ISIS
 
@@ -389,15 +453,15 @@ interface Port-Channel8.333
 ```eos
 !
 interface Loopback0
-   description LSR_Router_ID
+   description ROUTER_ID
    no shutdown
    ip address 100.70.0.5/32
    ipv6 address 2000:1234:ffff:ffff::5/128
-   isis enable CORE
-   isis passive
    mpls ldp interface
    node-segment ipv4 index 205
    node-segment ipv6 index 205
+   isis enable CORE
+   isis passive
 ```
 
 ### VLAN Interfaces
@@ -410,9 +474,9 @@ interface Loopback0
 
 ##### IPv4
 
-| Interface | VRF | IP Address | IP Address Virtual | IP Router Virtual Address | VRRP | ACL In | ACL Out |
-| --------- | --- | ---------- | ------------------ | ------------------------- | ---- | ------ | ------- |
-| Vlan2020 |  TENANT_B_INTRA  |  -  |  -  |  -  |  -  |  -  |  -  |
+| Interface | VRF | IP Address | IP Address Virtual | IP Router Virtual Address | ACL In | ACL Out |
+| --------- | --- | ---------- | ------------------ | ------------------------- | ------ | ------- |
+| Vlan2020 |  TENANT_B_INTRA  |  -  |  -  |  -  |  -  |  -  |
 
 #### VLAN Interfaces Device Configuration
 
@@ -505,7 +569,7 @@ ip route vrf MGMT 0.0.0.0/0 192.168.200.5
 
 | Process ID | Router ID | Default Passive Interface | No Passive Interface | BFD | Max LSA | Default Information Originate | Log Adjacency Changes Detail | Auto Cost Reference Bandwidth | Maximum Paths | MPLS LDP Sync Default | Distribute List In |
 | ---------- | --------- | ------------------------- | -------------------- | --- | ------- | ----------------------------- | ---------------------------- | ----------------------------- | ------------- | --------------------- | ------------------ |
-| 19 | 123.1.1.0 | enabled | Ethernet6.10 <br> | disabled | 10000 | disabled | disabled | - | - | - | - |
+| 19 | 10.123.1.0 | enabled | Ethernet6.10 <br> | disabled | 10000 | disabled | disabled | - | - | - | - |
 
 #### Router OSPF Router Redistribution
 
@@ -517,18 +581,18 @@ ip route vrf MGMT 0.0.0.0/0 192.168.200.5
 
 | Interface | Area | Cost | Point To Point |
 | -------- | -------- | -------- | -------- |
-| Ethernet6.10 | 0 | 10 | True |
+| Ethernet6.10 | 0.0.0.0 | 10 | True |
 
 #### Router OSPF Device Configuration
 
 ```eos
 !
 router ospf 19 vrf TENANT_B_INTRA
-   router-id 123.1.1.0
+   router-id 10.123.1.0
    passive-interface default
    no passive-interface Ethernet6.10
-   max-lsa 10000
    redistribute bgp
+   max-lsa 10000
 ```
 
 ### Router ISIS
@@ -538,14 +602,19 @@ router ospf 19 vrf TENANT_B_INTRA
 | Settings | Value |
 | -------- | ----- |
 | Instance | CORE |
-| Net-ID | 49.0001.0000.0001.0005.00 |
+| Net-ID | 49.0001.1000.7000.0005.00 |
 | Type | level-1-2 |
 | Router-ID | 100.70.0.5 |
 | Log Adjacency Changes | True |
 | MPLS LDP Sync Default | True |
-| Local Convergence Delay (ms) | 15000 |
 | Advertise Passive-only | True |
 | SR MPLS Enabled | True |
+
+#### ISIS Route Timers
+
+| Settings | Value |
+| -------- | ----- |
+| Local Convergence Delay | 15000 milliseconds |
 
 #### ISIS Interfaces Summary
 
@@ -582,9 +651,9 @@ router ospf 19 vrf TENANT_B_INTRA
 ```eos
 !
 router isis CORE
-   net 49.0001.0000.0001.0005.00
-   is-type level-1-2
+   net 49.0001.1000.7000.0005.00
    router-id ipv4 100.70.0.5
+   is-type level-1-2
    log-adjacency-changes
    mpls ldp sync default
    timers local-convergence-delay 15000 protected-prefixes
@@ -643,9 +712,9 @@ ASN Notation: asplain
 
 ##### EVPN Peer Groups
 
-| Peer Group | Activate | Encapsulation |
-| ---------- | -------- | ------------- |
-| MPLS-OVERLAY-PEERS | True | default |
+| Peer Group | Activate | Route-map In | Route-map Out | Encapsulation | Next-hop-self Source Interface |
+| ---------- | -------- | ------------ | ------------- | ------------- | ------------------------------ |
+| MPLS-OVERLAY-PEERS | True |  - | - | default | - |
 
 ##### EVPN Neighbor Default Encapsulation
 
@@ -665,7 +734,9 @@ ASN Notation: asplain
 
 | Instance | Route-Distinguisher | Both Route-Target | MPLS Control Word | Label Flow | MTU | Pseudowire | Local ID | Remote ID |
 | -------- | ------------------- | ----------------- | ----------------- | -----------| --- | ---------- | -------- | --------- |
-| TENANT_A | 100.70.0.5:1000 | 65000:1000 | False | False | - | TEN_A_site2_site5_eline_port_based | 26 | 57 |
+| TENANT_A | 100.70.0.5:1000 | 65000:1000 | False | False | - | TEN_A_site1_site2_eline_port_based | 16 | 27 |
+| TENANT_A | 100.70.0.5:1000 | 65000:1000 | False | False | - | TEN_A_site1_site2_eline_with_subinterfaces_100 | 119 | 129 |
+| TENANT_A | 100.70.0.5:1000 | 65000:1000 | False | False | - | TEN_A_site1_site2_eline_with_subinterfaces_101 | 120 | 130 |
 | TENANT_B | 100.70.0.5:2000 | 65000:2000 | False | False | - | TEN_B_site3_site5_eline_vlan_based_1000 | 31000 | 51000 |
 | TENANT_B | 100.70.0.5:2000 | 65000:2000 | False | False | - | TEN_B_site3_site5_eline_vlan_based_1001 | 31001 | 51001 |
 | TENANT_B | 100.70.0.5:2000 | 65000:2000 | False | False | - | TEN_B_site3_site5_eline_vlan_based_1002 | 31002 | 51002 |
@@ -674,9 +745,9 @@ ASN Notation: asplain
 
 #### Router BGP VRFs
 
-| VRF | Route-Distinguisher | Redistribute |
-| --- | ------------------- | ------------ |
-| TENANT_B_INTRA | 100.70.0.5:19 | connected<br>ospf |
+| VRF | Route-Distinguisher | Redistribute | Graceful Restart |
+| --- | ------------------- | ------------ | ---------------- |
+| TENANT_B_INTRA | 100.70.0.5:19 | connected<br>ospf | - |
 
 #### Router BGP Device Configuration
 
@@ -684,9 +755,9 @@ ASN Notation: asplain
 !
 router bgp 65000
    router-id 100.70.0.5
-   maximum-paths 4 ecmp 4
    update wait-install
    no bgp default ipv4-unicast
+   maximum-paths 4 ecmp 4
    distance bgp 20 200 200
    neighbor MPLS-OVERLAY-PEERS peer group
    neighbor MPLS-OVERLAY-PEERS remote-as 65000
@@ -696,9 +767,9 @@ router bgp 65000
    neighbor MPLS-OVERLAY-PEERS send-community
    neighbor MPLS-OVERLAY-PEERS maximum-routes 0
    neighbor 100.70.0.8 peer group MPLS-OVERLAY-PEERS
-   neighbor 100.70.0.8 description SITE1-RR1
+   neighbor 100.70.0.8 description SITE1-RR1_Loopback0
    neighbor 100.70.0.9 peer group MPLS-OVERLAY-PEERS
-   neighbor 100.70.0.9 description SITE2-RR1
+   neighbor 100.70.0.9 description SITE2-RR1_Loopback0
    !
    vlan 10
       rd 100.70.0.5:10010
@@ -719,8 +790,14 @@ router bgp 65000
       rd 100.70.0.5:1000
       route-target import export evpn 65000:1000
       !
-      pseudowire TEN_A_site2_site5_eline_port_based
-         evpn vpws id local 26 remote 57
+      pseudowire TEN_A_site1_site2_eline_port_based
+         evpn vpws id local 16 remote 27
+      !
+      pseudowire TEN_A_site1_site2_eline_with_subinterfaces_100
+         evpn vpws id local 119 remote 129
+      !
+      pseudowire TEN_A_site1_site2_eline_with_subinterfaces_101
+         evpn vpws id local 120 remote 130
    !
    vpws TENANT_B
       rd 100.70.0.5:2000
@@ -789,19 +866,6 @@ router bfd
 | LDP Interface Disabled Default | True |
 | LDP Transport-Address Interface | Loopback0 |
 
-#### MPLS and LDP Device Configuration
-
-```eos
-!
-mpls ip
-!
-mpls ldp
-   interface disabled default
-   router-id 100.70.0.5
-   no shutdown
-   transport-address interface Loopback0
-```
-
 ### MPLS Interfaces
 
 | Interface | MPLS IP Enabled | LDP Enabled | IGP Sync |
@@ -810,13 +874,30 @@ mpls ldp
 | Ethernet2 | True | True | True |
 | Loopback0 | - | True | - |
 
+### MPLS Device Configuration
+
+```eos
+!
+mpls ip
+!
+mpls ldp
+   router-id 100.70.0.5
+   transport-address interface Loopback0
+   interface disabled default
+   no shutdown
+```
+
 ## Patch Panel
 
 ### Patch Panel Summary
 
+#### Patch Panel Connections
+
 | Patch Name | Enabled | Connector A Type | Connector A Endpoint | Connector B Type | Connector B Endpoint |
 | ---------- | ------- | ---------------- | -------------------- | ---------------- | -------------------- |
-| TEN_A_site2_site5_eline_port_based | True | Interface | Ethernet6 | Pseudowire | bgp vpws TENANT_A pseudowire TEN_A_site2_site5_eline_port_based |
+| TEN_A_site1_site2_eline_port_based | True | Interface | Ethernet6 | Pseudowire | bgp vpws TENANT_A pseudowire TEN_A_site1_site2_eline_port_based |
+| TEN_A_site1_site2_eline_with_subinterfaces_100 | True | Interface | Ethernet9.100 | Pseudowire | bgp vpws TENANT_A pseudowire TEN_A_site1_site2_eline_with_subinterfaces_100 |
+| TEN_A_site1_site2_eline_with_subinterfaces_101 | True | Interface | Ethernet9.101 | Pseudowire | bgp vpws TENANT_A pseudowire TEN_A_site1_site2_eline_with_subinterfaces_101 |
 | TEN_B_site3_site5_eline_vlan_based_1000 | True | Interface | Port-Channel3.1000 | Pseudowire | bgp vpws TENANT_B pseudowire TEN_B_site3_site5_eline_vlan_based_1000 |
 | TEN_B_site3_site5_eline_vlan_based_1001 | True | Interface | Port-Channel3.1001 | Pseudowire | bgp vpws TENANT_B pseudowire TEN_B_site3_site5_eline_vlan_based_1001 |
 | TEN_B_site3_site5_eline_vlan_based_1002 | True | Interface | Port-Channel3.1002 | Pseudowire | bgp vpws TENANT_B pseudowire TEN_B_site3_site5_eline_vlan_based_1002 |
@@ -828,9 +909,17 @@ mpls ldp
 ```eos
 !
 patch panel
-   patch TEN_A_site2_site5_eline_port_based
+   patch TEN_A_site1_site2_eline_port_based
       connector 1 interface Ethernet6
-      connector 2 pseudowire bgp vpws TENANT_A pseudowire TEN_A_site2_site5_eline_port_based
+      connector 2 pseudowire bgp vpws TENANT_A pseudowire TEN_A_site1_site2_eline_port_based
+   !
+   patch TEN_A_site1_site2_eline_with_subinterfaces_100
+      connector 1 interface Ethernet9.100
+      connector 2 pseudowire bgp vpws TENANT_A pseudowire TEN_A_site1_site2_eline_with_subinterfaces_100
+   !
+   patch TEN_A_site1_site2_eline_with_subinterfaces_101
+      connector 1 interface Ethernet9.101
+      connector 2 pseudowire bgp vpws TENANT_A pseudowire TEN_A_site1_site2_eline_with_subinterfaces_101
    !
    patch TEN_B_site3_site5_eline_vlan_based_1000
       connector 1 interface Port-Channel3.1000

@@ -12,7 +12,6 @@ help: ## Display help message
 #########################################
 .PHONY: collection-build
 collection-build: ## Build arista.avd collection locally.
-	./python-avd/scripts/build-schemas.py
 	ansible-galaxy collection build --force ansible_collections/arista/avd
 
 #########################################
@@ -20,24 +19,42 @@ collection-build: ## Build arista.avd collection locally.
 #########################################
 .PHONY: pyavd-build
 pyavd-build: ## Build PyAVD Python package locally.
-	cd python-avd && $(MAKE) clean build
+	cd python-avd && $(MAKE) build
+
+.PHONY: uv-pyavd-build
+uv-pyavd-build: ## Build PyAVD Python package locally.
+	cd python-avd && $(MAKE) uv-build
 
 .PHONY: pyavd-test
 pyavd-test: ## Test PyAVD Python code with tox.
-	cd python-avd && $(MAKE) clean && tox -r
+	cd python-avd && $(MAKE) && tox -r
 
 .PHONY: pyavd-publish
 pyavd-publish: ## Build and publish PyAVD Python package.
-	cd python-avd && $(MAKE) clean build publish
+	cd python-avd && $(MAKE) build publish
+
+.PHONY: uv-pyavd-publish
+uv-pyavd-publish: ## Build and publish PyAVD Python package.
+	cd python-avd && $(MAKE) uv-build uv-publish
 
 .PHONY: pyavd-install
 pyavd-install: pyavd-build ## Build and install PyAVD Python package.
-	pip install python-avd/dist/*
+	pip install python-avd/dist/* --force-reinstall
 
 # The editable_mode=compat is required for pylance to pick up the editable install.
 .PHONY: pyavd-editable-install
 pyavd-editable-install: ## Build and install PyAVD as editable
-	pip install -e python-avd --config-settings editable_mode=compat
+	pip install -e python-avd --config-settings editable_mode=compat --force-reinstall
+
+
+.PHONY: uv-pyavd-install
+uv-pyavd-install: pyavd-build ## Build and install PyAVD Python package.
+	uv pip install python-avd/dist/* --force-reinstall
+
+# The editable_mode=compat is required for pylance to pick up the editable install.
+.PHONY: uv-pyavd-editable-install
+uv-pyavd-editable-install: ## Build and install PyAVD as editable
+	uv pip install -e python-avd --config-settings editable_mode=compat --force-reinstall
 
 #########################################
 # Code Validation using ansible-test 	#
@@ -83,3 +100,11 @@ unit-tests: ## Run unit test cases using ansible-test. Specify `ANSIBLE_TEST_MOD
 integration-tests: ## Run integration test cases using ansible-test. Specify `ANSIBLE_TEST_MODE=<venv|docker>` (default: `venv`).
 	cd ansible_collections/arista/avd/ ; \
 	ansible-test integration --requirements --$(ANSIBLE_TEST_MODE)
+
+####################
+# Random shortcuts #
+####################
+
+.PHONY: config-diff
+config-diff: ## Run git diff comparing molecule configs with 'devel' using our special config diff ignoring reordering of config lines.
+	@GIT_EXTERNAL_DIFF=development/compare.py git diff devel --ext-diff -- **/configs/*.cfg

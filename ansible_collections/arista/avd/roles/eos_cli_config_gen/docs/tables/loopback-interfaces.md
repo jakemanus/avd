@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2024 Arista Networks, Inc.
+  ~ Copyright (c) 2025 Arista Networks, Inc.
   ~ Use of this source code is governed by the Apache License 2.0
   ~ that can be found in the LICENSE file.
   -->
@@ -30,6 +30,7 @@
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;node_segment</samp>](## "loopback_interfaces.[].node_segment") | Dictionary |  |  |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ipv4_index</samp>](## "loopback_interfaces.[].node_segment.ipv4_index") | Integer |  |  |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ipv6_index</samp>](## "loopback_interfaces.[].node_segment.ipv6_index") | Integer |  |  |  |  |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;hardware_forwarding_id</samp>](## "loopback_interfaces.[].hardware_forwarding_id") | Boolean |  |  |  | Enable hardware forwarding for the VRF where this loopback interface belongs. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;eos_cli</samp>](## "loopback_interfaces.[].eos_cli") | String |  |  |  | EOS CLI rendered directly on the loopback interface in the final EOS configuration. |
 
 === "YAML"
@@ -72,6 +73,9 @@
         node_segment:
           ipv4_index: <int>
           ipv6_index: <int>
+
+        # Enable hardware forwarding for the VRF where this loopback interface belongs.
+        hardware_forwarding_id: <bool>
 
         # EOS CLI rendered directly on the loopback interface in the final EOS configuration.
         eos_cli: <str>

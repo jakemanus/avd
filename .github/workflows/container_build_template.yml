@@ -9,7 +9,7 @@ env:
   # The devcontainers/ci@v0.3 build will fail if this env variable is not set.
   BUILDX_NO_DEFAULT_ATTESTATIONS: 1
 
-on:
+"on":
   workflow_call:
     inputs:
       # Container name, e.g. "base", "dev", etc.
@@ -54,10 +54,15 @@ on:
       python_version:
         required: true
         type: string
+      # github_tag is only required for manual container build
+      github_tag:
+        required: false
+        type: string
+        default: ""
 
 jobs:
   build_image:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Starting container build
         run: echo "Starting container build. Be patient. 🐢"
@@ -74,12 +79,15 @@ jobs:
             case ${{ inputs.container_name }} in
               base)
                 echo "image_tags=python${{ inputs.python_version }}" >> $GITHUB_OUTPUT
+                echo "image_version=python${{ inputs.python_version }}" >> $GITHUB_OUTPUT
                 ;;
               dev)
                 echo "image_tags=python${{ inputs.python_version }}" >> $GITHUB_OUTPUT
+                echo "image_version=python${{ inputs.python_version }}" >> $GITHUB_OUTPUT
                 ;;
               *)
                 echo "image_tags=python${{ inputs.python_version }}-avd-${{ github.ref_name }}" >> $GITHUB_OUTPUT
+                echo "image_version=python${{ inputs.python_version }}-avd-${{ github.ref_name }}" >> $GITHUB_OUTPUT
                 ;;
             esac
           else
@@ -87,12 +95,15 @@ jobs:
               case ${{ inputs.container_name }} in
                 base)
                   echo "image_tags=latest,python${{ inputs.python_version }}" >> $GITHUB_OUTPUT
+                  echo "image_version=python${{ inputs.python_version }}" >> $GITHUB_OUTPUT
                   ;;
                 dev)
                   echo "image_tags=latest,python${{ inputs.python_version }}" >> $GITHUB_OUTPUT
+                  echo "image_version=python${{ inputs.python_version }}" >> $GITHUB_OUTPUT
                   ;;
                 *)
                   echo "image_tags=latest,python${{ inputs.python_version }}-avd-${{ github.ref_name }}" >> $GITHUB_OUTPUT
+                  echo "image_version=python${{ inputs.python_version }}-avd-${{ github.ref_name }}" >> $GITHUB_OUTPUT
                   ;;
               esac
             else
@@ -122,17 +133,20 @@ jobs:
             exit 1
           fi
 
-      - name: Find ansible-core version 🔥
-        id: find-ansible-core-version
+      - name: Find ansible and pyavd install location
+        id: find-install-locations
         run: |
-          ANSIBLE_CORE_VERSION=$(cat ansible_collections/arista/avd/requirements-dev.txt| grep ansible-core)
-          echo "ansible_core_version=$ANSIBLE_CORE_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Find ansible install location
-        id: find-ansible-install-location
-        run: |
-          ANSIBLE_INSTALL_LOCATION="git+https://github.com/${{ github.repository }}.git#/ansible_collections/arista/avd/,${{ github.ref_name }}"
-          echo "ansible_install_location=$ANSIBLE_INSTALL_LOCATION" >> $GITHUB_OUTPUT
+          if [ -z "${{ inputs.github_tag }}" ]; then
+            PYAVD_INSTALL_LOCATION="git+https://github.com/${{ github.repository }}.git@${{ github.ref_name }}#subdirectory=python-avd"
+            ANSIBLE_INSTALL_LOCATION="git+https://github.com/${{ github.repository }}.git#/ansible_collections/arista/avd/,${{ github.ref_name }}"
+            echo "ansible_install_location=$ANSIBLE_INSTALL_LOCATION" >> $GITHUB_OUTPUT
+            echo "pyavd_install_location=$PYAVD_INSTALL_LOCATION" >> $GITHUB_OUTPUT
+          else
+            PYAVD_INSTALL_LOCATION="git+https://github.com/${{ github.repository }}.git@${{ inputs.github_tag }}#subdirectory=python-avd"
+            ANSIBLE_INSTALL_LOCATION="git+https://github.com/${{ github.repository }}.git#/ansible_collections/arista/avd/,${{ inputs.github_tag }}"
+            echo "ansible_install_location=$ANSIBLE_INSTALL_LOCATION" >> $GITHUB_OUTPUT
+            echo "pyavd_install_location=$PYAVD_INSTALL_LOCATION" >> $GITHUB_OUTPUT
+          fi
 
       # This check is temporarily deactivated, will be rewised in later PRs
       #
@@ -157,6 +171,9 @@ jobs:
         uses: docker/setup-qemu-action@v3
         with:
           platforms: ${{ inputs.platform }}
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
+          # workaround for Failed to CreateCacheEntry warning
+          cache-image: false
 
       - name: Setup Docker buildX for multi-arch builds 🏗️
         # if: ${{ steps.check-image-presence.outputs.not_present == '1' }}
@@ -170,17 +187,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Get RFC3339 timestamp for org.opencontainers.image.created label ⌚
+        id: rfc3339
+        run: echo "timestamp=$(date --rfc-3339=seconds)" >> $GITHUB_OUTPUT
+
       - name: Pre-build dev container image 🔨
         # if: ${{ steps.check-image-presence.outputs.not_present == '1' }}
         uses: devcontainers/ci@v0.3
         env:
           FROM_IMAGE: ${{ steps.generate-from-parameters.outputs.from_image }}
           FROM_VARIANT: ${{ steps.generate-from-parameters.outputs.from_variant }}
-          ANSIBLE_INSTALL_LOCATION: ${{ steps.find-ansible-install-location.outputs.ansible_install_location }}
-          ANSIBLE_CORE_VERSION: ${{ steps.find-ansible-core-version.outputs.ansible_core_version }}
+          ANSIBLE_INSTALL_LOCATION: ${{ steps.find-install-locations.outputs.ansible_install_location }}
+          PYAVD_INSTALL_LOCATION: ${{ steps.find-install-locations.outputs.pyavd_install_location }}
           USERNAME: ${{ inputs.username }}
           UID: ${{ inputs.user_id }}
           GID: ${{ inputs.group_id }}
+          RFC3339_TIMESTAMP: ${{ steps.rfc3339.outputs.timestamp }}
+          IMAGE_VERSION: ${{ steps.build-tags.outputs.image_version }}
         with:
           subFolder: containers/${{ inputs.container_name }}
           imageName: ghcr.io/${{ github.repository }}/${{ inputs.container_name }}

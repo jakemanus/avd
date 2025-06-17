@@ -4,6 +4,8 @@
 
 - [Management](#management)
   - [Management API HTTP](#management-api-http)
+- [Authentication](#authentication)
+  - [Enable Password](#enable-password)
 - [Internal VLAN Allocation Policy](#internal-vlan-allocation-policy)
   - [Internal VLAN Allocation Policy Summary](#internal-vlan-allocation-policy-summary)
   - [Internal VLAN Allocation Policy Device Configuration](#internal-vlan-allocation-policy-device-configuration)
@@ -31,9 +33,9 @@
 
 #### Management API HTTP Summary
 
-| HTTP | HTTPS | Default Services |
-| ---- | ----- | ---------------- |
-| False | True | - |
+| HTTP | HTTPS | UNIX-Socket | Default Services |
+| ---- | ----- | ----------- | ---------------- |
+| False | True | - | - |
 
 #### Management API VRF Access
 
@@ -52,6 +54,12 @@ management api http-commands
    vrf MGMT
       no shutdown
 ```
+
+## Authentication
+
+### Enable Password
+
+Enable password has been disabled
 
 ## Internal VLAN Allocation Policy
 
@@ -98,10 +106,10 @@ vlan 4092
 
 | Interface | Description | Mode | VLANs | Native VLAN | Trunk Group | Channel-Group |
 | --------- | ----------- | ---- | ----- | ----------- | ----------- | ------------- |
-| Ethernet1 | L2ONLY-SPINE1_Ethernet1 | *trunk | *100,4092 | *- | *- | 1 |
-| Ethernet2 | L2ONLY-SPINE2_Ethernet1 | *trunk | *100,4092 | *- | *- | 1 |
-| Ethernet10 |  Endpoint | access | 100 | - | - | - |
-| Ethernet11 |  Endpoint | access | 100 | - | - | - |
+| Ethernet1 | L2_L2ONLY-SPINE1_Ethernet1 | *trunk | *100,4092 | *- | *- | 1 |
+| Ethernet2 | L2_L2ONLY-SPINE2_Ethernet1 | *trunk | *100,4092 | *- | *- | 1 |
+| Ethernet10 | Endpoint | access | 100 | - | - | - |
+| Ethernet11 | Endpoint | access | 100 | - | - | - |
 
 *Inherited from Port-Channel Interface
 
@@ -110,12 +118,12 @@ vlan 4092
 ```eos
 !
 interface Ethernet1
-   description L2ONLY-SPINE1_Ethernet1
+   description L2_L2ONLY-SPINE1_Ethernet1
    no shutdown
    channel-group 1 mode active
 !
 interface Ethernet2
-   description L2ONLY-SPINE2_Ethernet1
+   description L2_L2ONLY-SPINE2_Ethernet1
    no shutdown
    channel-group 1 mode active
 !
@@ -140,20 +148,20 @@ interface Ethernet11
 
 ##### L2
 
-| Interface | Description | Type | Mode | VLANs | Native VLAN | Trunk Group | LACP Fallback Timeout | LACP Fallback Mode | MLAG ID | EVPN ESI |
-| --------- | ----------- | ---- | ---- | ----- | ----------- | ------------| --------------------- | ------------------ | ------- | -------- |
-| Port-Channel1 | L2ONLY_SPINES_Po1 | switched | trunk | 100,4092 | - | - | - | - | - | - |
+| Interface | Description | Mode | VLANs | Native VLAN | Trunk Group | LACP Fallback Timeout | LACP Fallback Mode | MLAG ID | EVPN ESI |
+| --------- | ----------- | ---- | ----- | ----------- | ------------| --------------------- | ------------------ | ------- | -------- |
+| Port-Channel1 | L2_L2ONLY_SPINES_Port-Channel1 | trunk | 100,4092 | - | - | - | - | - | - |
 
 #### Port-Channel Interfaces Device Configuration
 
 ```eos
 !
 interface Port-Channel1
-   description L2ONLY_SPINES_Po1
+   description L2_L2ONLY_SPINES_Port-Channel1
    no shutdown
-   switchport
    switchport trunk allowed vlan 100,4092
    switchport mode trunk
+   switchport
 ```
 
 ### VLAN Interfaces
@@ -166,9 +174,9 @@ interface Port-Channel1
 
 ##### IPv4
 
-| Interface | VRF | IP Address | IP Address Virtual | IP Router Virtual Address | VRRP | ACL In | ACL Out |
-| --------- | --- | ---------- | ------------------ | ------------------------- | ---- | ------ | ------- |
-| Vlan4092 |  default  |  172.23.254.4/24  |  -  |  -  |  -  |  -  |  -  |
+| Interface | VRF | IP Address | IP Address Virtual | IP Router Virtual Address | ACL In | ACL Out |
+| --------- | --- | ---------- | ------------------ | ------------------------- | ------ | ------- |
+| Vlan4092 |  default  |  172.23.254.4/24  |  -  |  -  |  -  |  -  |
 
 #### VLAN Interfaces Device Configuration
 
@@ -229,8 +237,8 @@ no ip routing vrf MGMT
 
 ```eos
 !
-ip route vrf MGMT 0.0.0.0/0 172.31.0.1
 ip route 0.0.0.0/0 172.23.254.1
+ip route vrf MGMT 0.0.0.0/0 172.31.0.1
 ```
 
 ## Multicast

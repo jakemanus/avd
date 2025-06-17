@@ -1,16 +1,14 @@
-# Copyright (c) 2023-2024 Arista Networks, Inc.
+# Copyright (c) 2023-2025 Arista Networks, Inc.
 # Use of this source code is governed by the Apache License 2.0
 # that can be found in the LICENSE file.
-from __future__ import absolute_import, annotations, division, print_function
-
-__metaclass__ = type
+from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from json import dump
-from typing import TYPE_CHECKING, Mapping
+from typing import TYPE_CHECKING, Any
 
 from ansible.errors import AnsibleActionFail
-from ansible.parsing.yaml.dumper import AnsibleDumper
 from ansible.plugins.action import ActionBase, display
 
 from ansible_collections.arista.avd.plugins.plugin_utils.eos_validate_state_utils import AnsibleEOSDevice, ConfigManager, get_anta_results
@@ -21,23 +19,32 @@ from ansible_collections.arista.avd.plugins.plugin_utils.utils import (
     get_validated_value,
 )
 
+# AnsibleDumper moved in the devel version of Ansible and it makes sanity sad.
+try:
+    from ansible._internal._yaml._dumper import AnsibleDumper
+except ImportError:
+    from ansible.parsing.yaml.dumper import AnsibleDumper
+
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
 LOGGER = logging.getLogger("ansible_collections.arista.avd")
-# ANTA currently add some RichHandler to the root logger so need to disable propagation
-LOGGER.propagate = False
+with suppress(AttributeError):
+    # ANTA currently add some RichHandler to the root logger so need to disable propagation
+    # Suppressing AttribueError for ansible-lint
+    LOGGER.propagate = False
 LOGGING_LEVELS = ["DEBUG", "INFO", "ERROR", "WARNING", "CRITICAL"]
 
 
 class AnsibleNoAliasDumper(AnsibleDumper):
-    def ignore_aliases(self, data):
+    def ignore_aliases(self, _data: Any) -> bool:
         return True
 
 
 class ActionModule(ActionBase):
     # @cprofile()
-    def run(self, tmp=None, task_vars=None):
+    def run(self, tmp: Any = None, task_vars: dict | None = None) -> dict:
         self._supports_check_mode = True
 
         if task_vars is None:
@@ -51,10 +58,6 @@ class ActionModule(ActionBase):
         ansible_connection = self._connection
         ansible_check_mode = task_vars.get("ansible_check_mode", False)
         is_deployed = task_vars.get("is_deployed", True)
-        ansible_tags = {
-            "ansible_run_tags": task_vars.get("ansible_run_tags", ()),
-            "ansible_skip_tags": task_vars.get("ansible_skip_tags", ()),
-        }
         # This is not all the hostvars, but just the Ansible Hostvars Manager object where we can retrieve hostvars for each host on-demand.
         hostvars = task_vars["hostvars"]
 
@@ -70,9 +73,13 @@ class ActionModule(ActionBase):
         # Get task arguments and validate them
         try:
             logging_level = get_validated_value(
-                data=self._task.args, key="logging_level", expected_type=str, default_value="WARNING", allowed_values=LOGGING_LEVELS
+                data=self._task.args,
+                key="logging_level",
+                expected_type=str,
+                default_value="WARNING",
+                allowed_values=LOGGING_LEVELS,
             )
-            skipped_tests = get_validated_value(data=self._task.args, key="skipped_tests", expected_type=list, default_value=[])
+            skip_tests = get_validated_value(data=self._task.args, key="skip_tests", expected_type=list, default_value=[])
             save_catalog = get_validated_value(data=self._task.args, key="save_catalog", expected_type=bool, default_value=False)
             catalog_path = get_validated_path(path_input=self._task.args.get("device_catalog_path"), parent=True) if save_catalog else None
             test_results_dir = get_validated_path(path_input=self._task.args.get("test_results_dir"), parent=False)
@@ -91,8 +98,7 @@ class ActionModule(ActionBase):
                 anta_device=anta_device,
                 config_manager=config_manager,
                 logging_level=logging_level,
-                skipped_tests=skipped_tests,
-                ansible_tags=ansible_tags,
+                skip_tests=skip_tests,
                 save_catalog_name=catalog_path,
                 custom_anta_catalogs=custom_anta_catalogs,
                 # This convert Ansible Check Mode to dry_run
@@ -111,7 +117,8 @@ class ActionModule(ActionBase):
 
 
 def get_custom_anta_catalogs(hostvars: Mapping, hostname: str, custom_anta_catalogs_dir: Path) -> list[Path] | None:
-    """Retrieve the custom ANTA catalogs for the current inventory device.
+    """
+    Retrieve the custom ANTA catalogs for the current inventory device.
 
     Custom catalogs can be provided for each device or for each Ansible inventory group of devices.
 
@@ -139,7 +146,8 @@ def get_custom_anta_catalogs(hostvars: Mapping, hostname: str, custom_anta_catal
 
 
 def write_results(hostname: str, anta_results: list[dict], test_results_dir: Path) -> None:
-    """Save all test results from ANTA to a JSON file.
+    """
+    Save all test results from ANTA to a JSON file.
 
     The JSON file name is hard coded here to make sure we can retrieve it in the report plugin.
 
@@ -155,7 +163,8 @@ def write_results(hostname: str, anta_results: list[dict], test_results_dir: Pat
 
 
 def setup_module_logging(hostname: str, result: dict) -> None:
-    """Create a Filter to add the hostname to generate logs.
+    """
+    Create a Filter to add the hostname to generate logs.
 
     Add a Handler to copy the logs from the plugin into Ansible output based on their level
 
@@ -168,6 +177,6 @@ def setup_module_logging(hostname: str, result: dict) -> None:
     python_to_ansible_handler = PythonToAnsibleHandler(result, display)
     python_to_ansible_handler.addFilter(python_to_ansible_filter)
     LOGGER.addHandler(python_to_ansible_handler)
-    # TODO mechanism to manipulate the logger globally for pyavd
+    # TODO: mechanism to manipulate the logger globally for pyavd
     # Keep debug to be able to see logs with `-v` and `-vvv`
     LOGGER.setLevel(logging.DEBUG)

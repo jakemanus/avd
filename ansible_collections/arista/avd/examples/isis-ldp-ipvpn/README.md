@@ -3,7 +3,7 @@
 title: AVD example for a MPLS-VPN based WAN Network
 ---
 <!--
-  ~ Copyright (c) 2023-2024 Arista Networks, Inc.
+  ~ Copyright (c) 2023-2025 Arista Networks, Inc.
   ~ Use of this source code is governed by the Apache License 2.0
   ~ that can be found in the LICENSE file.
   -->
@@ -12,7 +12,7 @@ title: AVD example for a MPLS-VPN based WAN Network
 
 ## Introduction
 
-This example is the logical second step in introducing AVD to new users, following the [Introduction to Ansible and AVD](../../docs/getting-started/intro-to-ansible-and-avd.md) section. New users with access to virtual routers (using Arista vEOS-lab or cEOS) can learn how to generate configuration and documentation for a complete fabric environment. Users with access to physical routers will have to adapt a few settings. This is all documented inline in the comments included in the YAML files. If a lab with virtual or physical routers is not accessible, this example can also be used to only generate the output from AVD if desired.
+This example is the logical second step in introducing AVD to new users, following the [Introduction to Ansible and AVD](../../../../../docs/getting-started/intro-to-ansible-and-avd.md) section. New users with access to virtual routers (using Arista vEOS-lab or cEOS) can learn how to generate configuration and documentation for a complete fabric environment. Users with access to physical routers will have to adapt a few settings. This is all documented inline in the comments included in the YAML files. If a lab with virtual or physical routers is not accessible, this example can also be used to only generate the output from AVD if desired.
 
 The example includes and describes all the AVD files and their content used to build a MPLS-VPN WAN network covering two sites using the following:
 
@@ -24,29 +24,9 @@ This example does not include Integration with CloudVision to keep everything as
 
 ## Installation
 
-Requirements to use this example:
-
-- Follow the installation guide for AVD found [here](../../docs/installation/collection-installation.md).
-- Run the following playbook to copy the examples to your current working directory, for example `ansible-avd-examples`:
-
-`ansible-playbook arista.avd.install_examples`
-
-This will show the following:
-
-```shell
- ~/ansible-avd-examples# ansible-playbook arista.avd.install_examples
-
-PLAY [Install Examples]***************************************************************************************************************************************************************************************************************************************************************
-
-TASK [Copy all examples to ~/ansible-avd-examples]*****************************************************************************************************************************************************
-changed: [localhost]
-
-PLAY RECAP
-****************************************************************************************************************************************************************************************************************************************************************************
-localhost                  : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-```
-
-After the playbook has run successfully, the directory structure will look as shown below, the contents of which will be covered in later sections:
+--8<--
+ansible_collections/arista/avd/examples/common/example-installation.md
+--8<--
 
 ```shell
 ansible-avd-examples/ (or wherever the playbook was run)
@@ -62,9 +42,6 @@ ansible-avd-examples/ (or wherever the playbook was run)
     ├── README.md
     └── switch-basic-configurations
 ```
-
-!!! info
-    If the content of any file is ***modified*** and the playbook is rerun, the file ***will not*** be overwritten. However, if any file in the example is ***deleted*** and the playbook is rerun, Ansible will re-create the file.
 
 ## Overall design overview
 
@@ -121,7 +98,7 @@ Below is the basic configuration file for `p1`:
 
 ```eos title="p1-basic-configuration.txt"
 --8<--
-examples/isis-ldp-ipvpn/switch-basic-configurations/p1-basic-configuration.txt
+ansible_collections/arista/avd/examples/isis-ldp-ipvpn/switch-basic-configurations/p1-basic-configuration.txt
 --8<--
 ```
 
@@ -253,7 +230,7 @@ Since this example covers building a MPLS WAN network, AVD must know about the d
 
     ```yaml
     --8<--
-    examples/isis-ldp-ipvpn/group_vars/WAN1_P_ROUTERS.yml
+    ansible_collections/arista/avd/examples/isis-ldp-ipvpn/group_vars/WAN1_P_ROUTERS.yml
     --8<--
     ```
 
@@ -261,7 +238,7 @@ Since this example covers building a MPLS WAN network, AVD must know about the d
 
     ```yaml
     --8<--
-    examples/isis-ldp-ipvpn/group_vars/WAN1_PE_ROUTERS.yml
+    ansible_collections/arista/avd/examples/isis-ldp-ipvpn/group_vars/WAN1_PE_ROUTERS.yml
     --8<--
     ```
 
@@ -269,7 +246,7 @@ Since this example covers building a MPLS WAN network, AVD must know about the d
 
     ```yaml
     --8<--
-    examples/isis-ldp-ipvpn/group_vars/WAN1_RR_ROUTERS.yml
+    ansible_collections/arista/avd/examples/isis-ldp-ipvpn/group_vars/WAN1_RR_ROUTERS.yml
     --8<--
     ```
 
@@ -284,8 +261,8 @@ The first section defines how the Ansible host connects to the devices:
 ```yaml title="FABRIC.yml"
 ansible_connection: ansible.netcommon.httpapi # (1)!
 ansible_network_os: arista.eos.eos # (2)!
-ansible_user: ansible # (3)!
-ansible_password: ansible
+ansible_user: arista # (3)!
+ansible_password: arista
 ansible_become: true
 ansible_become_method: enable # (4)!
 ansible_httpapi_use_ssl: true # (5)!
@@ -308,14 +285,15 @@ underlay_routing_protocol: isis-ldp
 overlay_routing_protocol: ibgp
 
 local_users: # (2)!
-  - name: ansible
-    privilege: 15
-    role: network-admin
-    sha512_password: $6$QJUtFkyu9yoecsq.$ysGzlb2YXaIMvezqGEna7RE8CMALJHnv7Q1i.27VygyKUtSeX.n2xRTyOtCR8eOAl.4imBLyhXFc4o97P5n071
   - name: admin
     privilege: 15
     role: network-admin
     no_password: true
+  - name: arista
+    privilege: 15
+    role: network-admin
+    sha512_password: "$6$Enl0WfE32FthwyiJ$yTyGaEJ2uPKLU.F7314YtB7J1jrzrMi7ogXIRTEHQfLdLgKWWmr1UvNlZLN6AyuxET7G5aH3AI9OYRzxVTkB1."
+
 
 bgp_peer_groups: # (3)!
   mpls_overlay_peers:
@@ -325,7 +303,7 @@ p2p_uplinks_mtu: 1500 # (4)!
 ```
 
 1. The name of the fabric for internal AVD use. This name *must* match the name of an Ansible Group (and therefore a corresponding group_vars file) covering all network devices.
-2. Local users/passwords and their privilege levels. In this case, the `ansible` user is set with the password `ansible`, and an `admin` user is set with no password.
+2. Local users/passwords and their privilege levels. In this case, the `admin` user is set with no password and the `arista` user is set with the password `arista`.
 3. BGP peer groups and their passwords (all passwords are "arista").
 4. Point-to-point interface MTU, in this case, is set to 1500 since the example uses vEOS, but when using hardware, this should be set to 9214 instead.
 
@@ -464,7 +442,7 @@ core_interfaces:
 
 ```yaml title="NETWORK_SERVICES.yml"
 --8<--
-examples/isis-ldp-ipvpn/group_vars/NETWORK_SERVICES.yml
+ansible_collections/arista/avd/examples/isis-ldp-ipvpn/group_vars/NETWORK_SERVICES.yml
 --8<--
 ```
 
@@ -503,7 +481,7 @@ In this example, the deploy playbook looks like the following:
 
 ```yaml title="deploy.yml"
 --8<--
-examples/isis-ldp-ipvpn/deploy.yml
+ansible_collections/arista/avd/examples/isis-ldp-ipvpn/deploy.yml
 --8<--
 ```
 
@@ -518,7 +496,7 @@ Example of using the build playbook without devices (local tasks):
 
 ```yaml title="build.yml"
 --8<--
-examples/isis-ldp-ipvpn/build.yml
+ansible_collections/arista/avd/examples/isis-ldp-ipvpn/build.yml
 --8<--
 ```
 
@@ -546,7 +524,7 @@ ok: [p1 -> localhost] => (item=/home/user/Documents/git_projects/ansible-avd-exa
 
 If similar output is not shown, make sure:
 
-1. The documented [requirements](../../docs/installation/collection-installation.md) are met.
+1. The documented [requirements](../../../../../docs/installation/collection-installation.md) are met.
 2. The latest `arista.avd` collection is installed.
 
 ## Troubleshooting

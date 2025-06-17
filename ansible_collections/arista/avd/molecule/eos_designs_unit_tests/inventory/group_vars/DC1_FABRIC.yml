@@ -25,21 +25,26 @@ bgp_peer_groups:
   mlag_ipv4_underlay_peer:
     name: MLAG-PEERS
     password: "15AwQNBEJ1nyF/kBEtoAGw=="
+  # To check when names of mlag_ipv4_underlay_peer and mlag_ipv4_vrfs_peer are same
+  # bfd setting and structured_config.description will be ignored.
+  mlag_ipv4_vrfs_peer:
+    name: MLAG-PEERS
+    bfd: false
+    structured_config:
+      description: Description for mlag_ipv4_vrfs_peer via structured_config
   ipvpn_gateway_peers:
     name: IPVPN-INTERWORKING-PEERS
     password: "nWwwZQLPI34O1AhoANg77g=="
 
-# test with inline jinja2 targeting eos_designs_facts
-spine_platform: "7050SX3"
-spine_bgp_defaults: ['distance bgp 20 200 200']
-
 # Spine Switches
 spine:
   defaults:
-    platform: "{{ spine_platform }}"
+    platform: 7050SX3
+
     bgp_as: 65001
     loopback_ipv4_pool: 192.168.255.0/24
-    bgp_defaults: "{{ spine_bgp_defaults }}"
+    bgp_defaults:
+      - distance bgp 20 200 200
   nodes:
     - name: DC1-SPINE1
       id: 1
@@ -69,14 +74,17 @@ l3leaf:
   defaults:
     # Set to test automatic uplink/downlink allocation
     max_parallel_uplinks: 2
-    loopback_ipv4_pool: 192.168.255.0/24
+    # Testing multiple pools and ranges to represent 192.168.255.0-192.168.255.200. This will break into multiple entries in the EVPN overlay prefix-list.
+    loopback_ipv4_pool: 192.168.255.0-192.168.255.3, 192.168.255.4/30, 192.168.255.8-192.168.255.200
     loopback_ipv4_offset: 8
-    vtep_loopback_ipv4_pool: 192.168.254.0/24
+    # Testing multiple pools and ranges to represent 192.168.254.0-192.168.254.200. This will break into multiple entries in the EVPN overlay prefix-list.
+    vtep_loopback_ipv4_pool: 192.168.254.0-192.168.254.127, 192.168.254.128/26, 192.168.254.192-192.168.254.200
     # Commented out for automatic uplink allocation
     # uplink_interfaces: ['Ethernet1', 'Ethernet2', 'Ethernet3', 'Ethernet4']
     uplink_switches: ['DC1-SPINE1', 'DC1-SPINE2', 'DC1-SPINE3', 'DC1-SPINE4']
     max_uplink_switches: 8
-    uplink_ipv4_pool: 172.31.254.0/23
+      # Testing multiple pools and ranges to represent 172.31.254.0/23
+    uplink_ipv4_pool: 172.31.254.0/30, 172.31.254.4-172.31.254.127, 172.31.254.128/25, 172.31.255.0/24
     uplink_interface_speed: forced 100gfull
     bgp_defaults: ['distance bgp 20 200 200']
     platform: 7280R
@@ -94,8 +102,10 @@ l3leaf:
     filter:
       tenants: [ Tenant_A, Tenant_B, Tenant_C, Tenant_D ]
       tags: [ opzone, web, app, db, vmotion, nfs, v6wan, v6opzone ]
-    mlag_peer_l3_ipv4_pool: 10.255.251.0/24
-    mlag_peer_ipv4_pool: 10.255.252.0/24
+    # Testing multiple pools and ranges to represent 10.255.251.0/24
+    mlag_peer_l3_ipv4_pool: 10.255.251.0/29, 10.255.251.8-10.255.251.127, 10.255.251.128/25
+    # Testing multiple pools and ranges to represent 10.255.252.0/24
+    mlag_peer_ipv4_pool: 10.255.252.0/29, 10.255.252.8-10.255.252.127, 10.255.252.128/25
   node_groups:
     - group: DC1_LEAF1
       platform: VEOS
@@ -110,6 +120,9 @@ l3leaf:
           mac_address: '0c:1d:c0:1d:62:01'
           # Commented out for automatic downlink allocation on spine
           # uplink_switch_interfaces: [ Ethernet1, Ethernet1, Ethernet1, Ethernet1 ]
+          # Test setting loopback0 and the VTEP loopback manually
+          loopback_ipv4_address: 192.168.42.42
+          vtep_loopback_ipv4_address: 192.168.43.43
     - group: DC1_LEAF2
       bgp_as: 65102
       rack: "rackD"
@@ -122,6 +135,8 @@ l3leaf:
           rack: "rackC"
           mgmt_ip: 192.168.200.106/24
           mac_address: '0c:1d:c0:1d:62:01'
+          ptp:
+            enabled: false
           # Commented out for automatic downlink allocation on spine
           # uplink_switch_interfaces: [ Ethernet2, Ethernet2, Ethernet2, Ethernet2 ]
         - name: DC1-LEAF2B
@@ -136,7 +151,7 @@ l3leaf:
       mlag_domain_id: custom_mlag_domain_id
       filter:
         tenants: [ Tenant_A, Tenant_B, Tenant_C ]
-        tags: [ opzone, web, app, db, vmotion, nfs, wan ]
+        tags: [ opzone, web, app, db, vmotion, nfs, wan, erp3 ]
       nodes:
         - name: DC1-SVC3A
           id: 4
@@ -163,9 +178,9 @@ l3leaf:
               destinations:
                 - destination: 192.168.200.10
                 - destination: 10.0.200.90
-              # Testing custom_structured_configuration using inline jinja with switch.x facts.
-              # Common customer use case, so we should make sure this does not break.
-              source_interface: "{{ switch.mgmt_interface }}"
+              # Need to overwrite at host var level for platform with different management interface
+              # This tests was run with inline Jinja previously
+              source_interface: Management0
       # NB - uplink_switch_interfaces Ethernet19-21 are used by MH_LEAF1A, 1B and 2A.
       nodes:
         - name: DC1-BL1A
@@ -176,7 +191,11 @@ l3leaf:
           uplink_switch_interfaces: [ Ethernet22, Ethernet22, Ethernet22, Ethernet22 ]
           evpn_gateway:
             remote_peers:
-              - hostname: "DC1-BL2A"
+              - hostname: DC1-BL2A
+                # Testing below that the override is working
+              - hostname: DC1-BL2B
+                ip_address: 192.168.42.42  # Should be 192.168.255.17
+                bgp_as: 65042  # Should be 65107
             evpn_l2:
               enabled: true
             evpn_l3:
@@ -190,10 +209,10 @@ l3leaf:
           uplink_switch_interfaces: [ Ethernet23, Ethernet23, Ethernet23, Ethernet23 ]
           evpn_gateway:
             remote_peers:
-              - hostname: "MY_EVPN_GW1_USER_DEFINED"
+              - hostname: MY_EVPN_GW1_USER_DEFINED
                 ip_address: 1.1.1.1
                 bgp_as: 65555
-              - hostname: "MY_EVPN_GW2_USER_DEFINED"
+              - hostname: MY_EVPN_GW2_USER_DEFINED
                 ip_address: 2.2.2.2
                 bgp_as: 65555
             evpn_l2:
@@ -259,6 +278,7 @@ l3leaf:
           mgmt_ip: 192.168.200.120/24
           uplink_switch_interfaces: [ Ethernet27, Ethernet27, Ethernet27, Ethernet27 ]
     - group: DC1_UNDEPLOYED_LEAF1
+      platform: my_custom_platform
       filter:
         tenants: [ Tenant_A, Tenant_B, Tenant_C ]
         tags: [ opzone, web, app, db, vmotion, nfs, wan ]
@@ -305,6 +325,8 @@ l2leaf:
           mac_address: '0c:1d:c0:1d:62:01'
           uplink_switch_interfaces: [ Ethernet7, Ethernet7 ]
           uplink_mtu: 1498
+          ptp:
+            enabled: true
         - name: DC1-L2LEAF1B
           id: 11
           mgmt_ip: 192.168.200.115/24
@@ -368,6 +390,20 @@ l2leaf:
         - name: DC1.L2LEAF5B
           id: 15
           mgmt_ip: 192.168.200.121/24
+    # Example for issue 4124
+    - group: DC1_L2LEAF6
+      short_esi: auto # Test Auto ESI to MLAG pair
+      nodes:
+        - name: DC1.L2LEAF6A
+          id: 16
+          mgmt_ip: 192.168.200.122/24
+          uplink_switches: [ DC1-LEAF2A ]
+          uplink_switch_interfaces: [ Ethernet30 ]
+        - name: DC1.L2LEAF6B
+          id: 17
+          mgmt_ip: 192.168.200.123/24
+          uplink_switches: [ DC1-LEAF2B ]
+          uplink_switch_interfaces: [ Ethernet31 ]
 
 # Update p2p mtu 9000 -> 1500
 p2p_uplinks_mtu: 1500
@@ -388,8 +424,14 @@ platform_speed_groups:
         speed_groups: [ 3, 2, 5/1 ]    # Unsorted order, but we should sort output correctly.
       - speed: 10G
         speed_groups: [ 1, 2, 4 ] # Duplicate speed-group 2. Since we sort on key first the result will be 25G for group 2
+  - platform: my_custom_platform
+    speeds:
+      - speed: 10G
+        speed_groups: [ 3, 2, 5/1 ]
+      - speed: 25G
+        speed_groups: [ 1, 2, 4 ]
 
 # Set Aboot password with sha512 hash
-boot:
+override_boot:
   secret:
     key: a153de6290ff1409257ade45f

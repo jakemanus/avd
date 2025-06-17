@@ -1,5 +1,5 @@
 {#
- Copyright (c) 2023-2024 Arista Networks, Inc.
+ Copyright (c) 2023-2025 Arista Networks, Inc.
  Use of this source code is governed by the Apache License 2.0
  that can be found in the LICENSE file.
 #}
@@ -12,7 +12,7 @@
 {% endif %}
 {% set node_types = dict() %}
 {% if hostvars[groups[fabric_group][0]]['node_type_keys'] is arista.avd.defined %}
-{%     set node_type_keys = hostvars[groups[fabric_group][0]]['node_type_keys'] | arista.avd.convert_dicts('key') | map(attribute='key') %}
+{%     set node_type_keys = hostvars[groups[fabric_group][0]]['node_type_keys'] | map(attribute='key') %}
 {% else %}
 {%     set node_type_keys = ['spine', 'l3leaf', 'l2leaf', 'super_spine', 'overlay_controller'] %}
 {% endif %}
@@ -25,6 +25,19 @@
 {%         endif %}
 {%     endfor %}
 {% endfor %}
+{% set mgmt_interface_vrf = hostvars[groups[fabric_group][0]].mgmt_interface_vrf | arista.avd.default("MGMT") %}
+{# setting nameservers from old name_servers model or filtering dns_settings.servers for all devices with mgmt_interface_vrf either directly or indirectly. #}
+{% set nameservers = hostvars[groups[fabric_group][0]].name_servers | arista.avd.default([]) + (
+                         hostvars[groups[fabric_group][0]].dns_settings.servers | arista.avd.default([]) |
+                             selectattr("vrf", "arista.avd.defined", mgmt_interface_vrf) | map(attribute="ip_address")
+                     ) + (
+                         hostvars[groups[fabric_group][0]].dns_settings.servers | arista.avd.default([]) |
+                             selectattr("vrf", "arista.avd.defined", "use_mgmt_interface_vrf") | map(attribute="ip_address")
+                     ) + (
+                         hostvars[groups[fabric_group][0]].dns_settings.servers | arista.avd.default([]) |
+                             rejectattr("vrf", "arista.avd.defined") | map(attribute="ip_address")
+                             if default_mgmt_method | arista.avd.default("oob") == "oob" else []
+                     ) | unique %}
 {# DHCP YAML configuration rendering #}
 ---
 ztp:
@@ -33,10 +46,10 @@ ztp:
 {% if hostvars[groups[fabric_group][0]]['mgmt_gateway'] is arista.avd.defined %}
     gateway: {{ hostvars[groups[fabric_group][0]]['mgmt_gateway'] }}
 {% endif %}
-{% if hostvars[groups[fabric_group][0]]['name_servers'] is arista.avd.defined %}
+{% if nameservers %}
     nameservers:
-{%     for name_server in hostvars[groups[fabric_group][0]]['name_servers'] | arista.avd.natural_sort %}
-      - {{ name_server }}
+{%     for nameserver in nameservers | arista.avd.natural_sort %}
+      - {{ nameserver }}
 {%     endfor %}
 {% endif %}
 {% if ztp_mac_source == 'system' %}
@@ -53,10 +66,10 @@ ztp:
 {% if hostvars[groups[fabric_group][0]]['mgmt_gateway'] is arista.avd.defined %}
         gateway: {{ hostvars[groups[fabric_group][0]]['mgmt_gateway'] }}
 {% endif %}
-{% if hostvars[groups[fabric_group][0]]['name_servers'] is arista.avd.defined %}
+{% if nameservers %}
         nameservers:
-{%     for name_server in hostvars[groups[fabric_group][0]]['name_servers'] | arista.avd.natural_sort %}
-          - {{ name_server }}
+{%     for nameserver in nameservers | arista.avd.natural_sort %}
+          - {{ nameserver }}
 {%     endfor %}
 {% endif %}
 {% if ztp_pool_start is arista.avd.defined %}
@@ -70,8 +83,8 @@ ztp:
 {% for node_type in node_types | arista.avd.natural_sort %}
     # {{ node_type }}
 {# For NODE GROUPS entries #}
-{%     for node_group in node_types[node_type]['node_groups'] | arista.avd.convert_dicts('group') | arista.avd.natural_sort('group') %}
-{%         for node in node_group['nodes'] | arista.avd.convert_dicts('name') | arista.avd.natural_sort('name') %}
+{%     for node_group in node_types[node_type]['node_groups'] | arista.avd.natural_sort('group') %}
+{%         for node in node_group['nodes'] | arista.avd.natural_sort('name') %}
 {%             if node.mac_address is arista.avd.defined %}
     - name: {{ node.name }}
       mac: '{{ node.mac_address }}'
@@ -80,7 +93,7 @@ ztp:
 {%         endfor %}
 {%     endfor %}
 {# For NODES List #}
-{%     for node in node_types[node_type]['nodes'] | arista.avd.convert_dicts('name') | arista.avd.natural_sort('name') %}
+{%     for node in node_types[node_type]['nodes'] | arista.avd.natural_sort('name') %}
 {%         if node.mac_address is arista.avd.defined %}
     - name: {{ node.name }}
       mac: '{{ node.mac_address }}'

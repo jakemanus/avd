@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2024 Arista Networks, Inc.
+  ~ Copyright (c) 2025 Arista Networks, Inc.
   ~ Use of this source code is governed by the Apache License 2.0
   ~ that can be found in the LICENSE file.
   -->
@@ -13,6 +13,7 @@
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;shutdown</samp>](## "tunnel_interfaces.[].shutdown") | Boolean |  |  |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;mtu</samp>](## "tunnel_interfaces.[].mtu") | Integer |  |  | Min: 68<br>Max: 65535 |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;vrf</samp>](## "tunnel_interfaces.[].vrf") | String |  |  |  | VRF Name. |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;underlay_vrf</samp>](## "tunnel_interfaces.[].underlay_vrf") | String |  |  |  | Underlay VRF Name. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;ip_address</samp>](## "tunnel_interfaces.[].ip_address") | String |  |  | Format: ipv4_cidr | IPv4_address/Mask. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;ipv6_enable</samp>](## "tunnel_interfaces.[].ipv6_enable") | Boolean |  |  |  |  |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;ipv6_address</samp>](## "tunnel_interfaces.[].ipv6_address") | String |  |  | Format: ipv6_cidr | IPv6_address/Mask. |
@@ -25,7 +26,8 @@
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ipv6</samp>](## "tunnel_interfaces.[].tcp_mss_ceiling.ipv6") | Integer |  |  | Min: 64<br>Max: 65475 | Segment Size for IPv6. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;direction</samp>](## "tunnel_interfaces.[].tcp_mss_ceiling.direction") | String |  |  | Valid Values:<br>- <code>ingress</code><br>- <code>egress</code> | Optional direction ('ingress', 'egress')  for tcp mss ceiling.<br> |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;tunnel_mode</samp>](## "tunnel_interfaces.[].tunnel_mode") | String |  |  | Valid Values:<br>- <code>gre</code><br>- <code>ipsec</code> | Tunnel encapsulation method.<br>`gre`: Generic route encapsulation protocol,<br>`ipsec`: IPsec-over-IP encapsulation. |
-    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;source_interface</samp>](## "tunnel_interfaces.[].source_interface") | String |  |  |  | Tunnel Source Interface Name. |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;source_interface</samp>](## "tunnel_interfaces.[].source_interface") | String |  |  |  | Tunnel Source Interface Name.<br>Mutually exclusive with `source`, if both are defined `source_interface` takes precedence. |
+    | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;source</samp>](## "tunnel_interfaces.[].source") | String |  |  |  | Tunnel Source IPv4/IPv6 address.<br>Mutually exclusive with `source_interface`, if both are defined `source_interface` takes precedence. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;destination</samp>](## "tunnel_interfaces.[].destination") | String |  |  |  | IPv4 or IPv6 Address Tunnel Destination. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;path_mtu_discovery</samp>](## "tunnel_interfaces.[].path_mtu_discovery") | Boolean |  |  |  | Enable Path MTU Discovery On Tunnel. |
     | [<samp>&nbsp;&nbsp;&nbsp;&nbsp;ipsec_profile</samp>](## "tunnel_interfaces.[].ipsec_profile") | String |  |  |  | Used only when `tunnel_mode` is set to `ipsec`.<br>It must target a defined IPsec profile. |
@@ -45,6 +47,9 @@
 
         # VRF Name.
         vrf: <str>
+
+        # Underlay VRF Name.
+        underlay_vrf: <str>
 
         # IPv4_address/Mask.
         ip_address: <str>
@@ -81,7 +86,12 @@
         tunnel_mode: <str; "gre" | "ipsec">
 
         # Tunnel Source Interface Name.
+        # Mutually exclusive with `source`, if both are defined `source_interface` takes precedence.
         source_interface: <str>
+
+        # Tunnel Source IPv4/IPv6 address.
+        # Mutually exclusive with `source_interface`, if both are defined `source_interface` takes precedence.
+        source: <str>
 
         # IPv4 or IPv6 Address Tunnel Destination.
         destination: <str>

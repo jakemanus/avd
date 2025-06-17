@@ -3,7 +3,7 @@
 title: Example for Campus Fabric
 ---
 <!--
-  ~ Copyright (c) 2023-2024 Arista Networks, Inc.
+  ~ Copyright (c) 2023-2025 Arista Networks, Inc.
   ~ Use of this source code is governed by the Apache License 2.0
   ~ that can be found in the LICENSE file.
   -->
@@ -16,31 +16,9 @@ This example describes and includes all the AVD files used to build a Campus Fab
 
 ## Installation & Requirements
 
-1. Install AVD - Installation guide found [here](../../docs/installation/collection-installation.md).
-2. Install Ansible module requirements - Instructions found [here](../../docs/installation/collection-installation.md).
-3. Run the following playbook to copy the Getting Started examples to your working directory.
-
-``` bash
-# current working directory: ~/ansible-avd-examples
-ansible-playbook arista.avd.install_examples
-```
-
-The output will show something similar to the following. If not, please ensure that AVD and all requirements are correctly installed.
-
-``` shell
- ~/ansible-avd-examples# ansible-playbook arista.avd.install_examples
-
-PLAY [Install Examples]***************************************************************************************************************************************************************************************************************************************************************
-
-TASK [Copy all examples to ~/ansible-avd-examples]*****************************************************************************************************************************************************
-changed: [localhost]
-
-PLAY RECAP
-****************************************************************************************************************************************************************************************************************************************************************************
-localhost                  : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
-```
-
-After the playbook has run successfully, the following directory structure will be created.
+--8<--
+ansible_collections/arista/avd/examples/common/example-installation.md
+--8<--
 
 ``` shell
 ansible-avd-examples/     (directory where playbook was run)
@@ -56,10 +34,6 @@ ansible-avd-examples/     (directory where playbook was run)
     ├── inventory.yml
     └── README.md (this document)
 ```
-
-???+ info
-
-    If the content of any file in the example is ***modified*** and the playbook is run again, the file ***will not*** be overwritten. However, if any file in the example is ***deleted*** and the playbook is run again, the file will be re-created.
 
 ## Design Overview
 
@@ -95,7 +69,7 @@ Below is the basic configuration file for SPINE1:
 
 ``` shell
 --8<--
-examples/campus-fabric/switch-basic-configurations/SPINE1.cfg
+ansible_collections/arista/avd/examples/campus-fabric/switch-basic-configurations/SPINE1.cfg
 --8<--
 ```
 
@@ -132,7 +106,7 @@ If DNS is unavailable, define the variable ansible_host as an IP address for eac
 
 ``` yaml
 --8<--
-examples/campus-fabric/inventory.yml
+ansible_collections/arista/avd/examples/campus-fabric/inventory.yml
 --8<--
 ```
 
@@ -198,7 +172,7 @@ The tabs below show the Ansible **group_vars** used in this example.
 
     ``` yaml
     --8<--
-    examples/campus-fabric/group_vars/DC1.yml
+    ansible_collections/arista/avd/examples/campus-fabric/group_vars/DC1.yml
     --8<--
     ```
 
@@ -211,7 +185,7 @@ The tabs below show the Ansible **group_vars** used in this example.
 
     ``` yaml
     --8<--
-    examples/campus-fabric/group_vars/DC1_FABRIC.yml
+    ansible_collections/arista/avd/examples/campus-fabric/group_vars/DC1_FABRIC.yml
     --8<--
     ```
 
@@ -220,7 +194,7 @@ The tabs below show the Ansible **group_vars** used in this example.
 
     ``` yaml
     --8<--
-    examples/campus-fabric/group_vars/DC1_SPINES.yml
+    ansible_collections/arista/avd/examples/campus-fabric/group_vars/DC1_SPINES.yml
     --8<--
     ```
 
@@ -229,7 +203,7 @@ The tabs below show the Ansible **group_vars** used in this example.
 
     ``` yaml
     --8<--
-    examples/campus-fabric/group_vars/DC1_LEAFS.yml
+    ansible_collections/arista/avd/examples/campus-fabric/group_vars/DC1_LEAFS.yml
     --8<--
     ```
 
@@ -238,16 +212,16 @@ The tabs below show the Ansible **group_vars** used in this example.
 
     ``` yaml
     --8<--
-    examples/campus-fabric/group_vars/DC1_NETWORK_SERVICES.yml
+    ansible_collections/arista/avd/examples/campus-fabric/group_vars/DC1_NETWORK_SERVICES.yml
     --8<--
     ```
 
 === "DC1_NETWORK_PORTS"
-    Our fabric would not be complete without connecting some devices to it. Therefore, we define port profiles and network port ranges in the  **group_vars/DC1_NETWORKS_PORTS.yml** file. A single port_profile may be used across several switches and port ranges. In our example, we create a port profile called `PP-DOT1X` to define generic 802.1x (NAC) settings we wish to apply to a range of ports. The `network_ports` data model defines which switches and ports to apply the port profile. This data model allows a single regex statement to define a list of switches. In addition, the variable `switch_ports` expands into a range of ports. You can view more details of the `range_expand` filter [here](../../docs/plugins/Filter_plugins/range_expand.md). These variables are applied to the spine and leaf nodes since they are a part of this inventory group.
+    Our fabric would not be complete without connecting some devices to it. Therefore, we define port profiles and network port ranges in the  **group_vars/DC1_NETWORKS_PORTS.yml** file. A single port_profile may be used across several switches and port ranges. In our example, we create a port profile called `PP-DOT1X` to define generic 802.1x (NAC) settings we wish to apply to a range of ports. The `network_ports` data model defines which switches and ports to apply the port profile. This data model allows a single regex statement to define a list of switches. In addition, the variable `switch_ports` expands into a range of ports. You can view more details of the `range_expand` filter [here](../../../../../docs/plugins/Filter_plugins/range_expand.md). These variables are applied to the spine and leaf nodes since they are a part of this inventory group.
 
     ``` yaml
     --8<--
-    examples/campus-fabric/group_vars/DC1_NETWORK_PORTS.yml
+    ansible_collections/arista/avd/examples/campus-fabric/group_vars/DC1_NETWORK_PORTS.yml
     --8<--
     ```
 
@@ -302,7 +276,7 @@ Now that we have defined all of our Ansible variables (AVD inputs), it is time t
 
     ``` yaml
     --8<--
-    examples/campus-fabric/build.yml
+    ansible_collections/arista/avd/examples/campus-fabric/build.yml
     --8<--
     ```
 
@@ -310,7 +284,7 @@ Now that we have defined all of our Ansible variables (AVD inputs), it is time t
 
     ``` yaml
     --8<--
-    examples/campus-fabric/deploy.yml
+    ansible_collections/arista/avd/examples/campus-fabric/deploy.yml
     --8<--
     ```
 
@@ -340,7 +314,7 @@ Your configuration files should be similar to these.
 
     ``` shell
     --8<--
-    examples/campus-fabric/intended/configs/SPINE1.cfg
+    ansible_collections/arista/avd/examples/campus-fabric/intended/configs/SPINE1.cfg
     --8<--
     ```
 
@@ -348,7 +322,7 @@ Your configuration files should be similar to these.
 
     ``` shell
     --8<--
-    examples/campus-fabric/intended/configs/SPINE2.cfg
+    ansible_collections/arista/avd/examples/campus-fabric/intended/configs/SPINE2.cfg
     --8<--
     ```
 
@@ -356,7 +330,7 @@ Your configuration files should be similar to these.
 
     ``` shell
     --8<--
-    examples/campus-fabric/intended/configs/LEAF1A.cfg
+    ansible_collections/arista/avd/examples/campus-fabric/intended/configs/LEAF1A.cfg
     --8<--
     ```
 
@@ -364,7 +338,7 @@ Your configuration files should be similar to these.
 
     ``` shell
     --8<--
-    examples/campus-fabric/intended/configs/LEAF1B.cfg
+    ansible_collections/arista/avd/examples/campus-fabric/intended/configs/LEAF1B.cfg
     --8<--
     ```
 
@@ -372,7 +346,7 @@ Your configuration files should be similar to these.
 
     ``` shell
     --8<--
-    examples/campus-fabric/intended/configs/LEAF2A.cfg
+    ansible_collections/arista/avd/examples/campus-fabric/intended/configs/LEAF2A.cfg
     --8<--
     ```
 
@@ -380,7 +354,7 @@ Your configuration files should be similar to these.
 
     ``` shell
     --8<--
-    examples/campus-fabric/intended/configs/LEAF3A.cfg
+    ansible_collections/arista/avd/examples/campus-fabric/intended/configs/LEAF3A.cfg
     --8<--
     ```
 
@@ -388,7 +362,7 @@ Your configuration files should be similar to these.
 
     ``` shell
     --8<--
-    examples/campus-fabric/intended/configs/LEAF3B.cfg
+    ansible_collections/arista/avd/examples/campus-fabric/intended/configs/LEAF3B.cfg
     --8<--
     ```
 
@@ -396,7 +370,7 @@ Your configuration files should be similar to these.
 
     ``` shell
     --8<--
-    examples/campus-fabric/intended/configs/LEAF3C.cfg
+    ansible_collections/arista/avd/examples/campus-fabric/intended/configs/LEAF3C.cfg
     --8<--
     ```
 
@@ -404,7 +378,7 @@ Your configuration files should be similar to these.
 
     ``` shell
     --8<--
-    examples/campus-fabric/intended/configs/LEAF3D.cfg
+    ansible_collections/arista/avd/examples/campus-fabric/intended/configs/LEAF3D.cfg
     --8<--
     ```
 
@@ -412,7 +386,7 @@ Your configuration files should be similar to these.
 
     ``` shell
     --8<--
-    examples/campus-fabric/intended/configs/LEAF3E.cfg
+    ansible_collections/arista/avd/examples/campus-fabric/intended/configs/LEAF3E.cfg
     --8<--
     ```
 

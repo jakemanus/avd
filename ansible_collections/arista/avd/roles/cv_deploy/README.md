@@ -3,7 +3,7 @@
 title: Ansible Collection Role cv_deploy
 ---
 <!--
-  ~ Copyright (c) 2024 Arista Networks, Inc.
+  ~ Copyright (c) 2024-2025 Arista Networks, Inc.
   ~ Use of this source code is governed by the Apache License 2.0
   ~ that can be found in the LICENSE file.
   -->
@@ -28,14 +28,35 @@ The available identification depends on the configured AVD variables.
 
 The API to CloudVision is using gRPC over encrypted HTTP/2.
 
+!!! Note
+
+    Please note that in case of using CVaaS, the correct regional URL where the CVaaS tenant is deployed must be used
+    for the `cv_server` var. The following are the cluster URLs used in production:
+
+    | Region | URL |
+    |--------|-----|
+    | United States 1a | `www.arista.io` |
+    | United States 1b | `www.cv-prod-us-central1-b.arista.io`|
+    | United States 1c | `www.cv-prod-us-central1-c.arista.io`|
+    | Canada | `www.cv-prod-na-northeast1-b.arista.io` |
+    | Europe West 2| `www.cv-prod-euwest-2.arista.io` |
+    | Japan| `www.cv-prod-apnortheast-1.arista.io` |
+    | Australia | `www.cv-prod-ausoutheast-1.arista.io` |
+    | United Kingdon | `www.cv-prod-uk-1.arista.io` |
+
+!!! Warning
+
+    URLs without `www` are not supported.
+
 ## Limitations
 
-- It is not possible to authenticate with username/password.
-- Configuration deployment is based on the "Static Configuration Studio" which is still a Beta feature on CloudVision.
-  - This role is **only** supported on **CloudVision as a Service (CVaaS)** or "on-prem" **CloudVision 2024.1.0** or later.
-  - Make sure to enable "Studios - End-to-End Provisioning" under Settings, Features.
+- It is not possible to authenticate with username/password. See the [instructions below](#steps-to-create-service-accounts-on-cloudvision) on how to create a service account on CloudVision.
+- This role is **only** supported on **CloudVision as a Service (CVaaS)** or "on-prem" **CloudVision 2024.1.0** or later.
+  - Configuration deployment is based on the "Static Configuration Studio" which was a Beta feature on CloudVision 2024.1.0.
+    Make sure to enable "Studios - End-to-End Provisioning" under Settings, Features.
 
-    ![Figure 1: Ansible Role arista.avd.cv_deploy](../../docs/_media/studios_end_to_end_provisioning.png)
+    ![Figure 1: Ansible Role arista.avd.cv_deploy](../../../../../docs/_media/studios_end_to_end_provisioning.png)
+- Currently only the first of the given cv_servers is being used.
 
 ## Roadmap
 
@@ -49,6 +70,7 @@ This feature is still under development, so several planned features are not imp
 - Add automatic testing.
 - Add required CloudVision versions once the APIs are generally available.
 - Update AVD examples.
+- Handle multinode clusters by trying connecting to each one by one.
 
 ## Example
 
@@ -74,8 +96,8 @@ The workspace will be built and submitted, and a change control will be created 
 
 Figure 2 below provides a visualization of the role's inputs, outputs executed by the role.
 
-![Figure 2: Ansible Role arista.avd.cv_deploy](../../docs/_media/cv_deploy_dark.svg#only-dark)
-![Figure 2: Ansible Role arista.avd.cv_deploy](../../docs/_media/cv_deploy_light.svg#only-light)
+![Figure 2: Ansible Role arista.avd.cv_deploy](../../../../../docs/_media/cv_deploy_dark.svg#only-dark)
+![Figure 2: Ansible Role arista.avd.cv_deploy](../../../../../docs/_media/cv_deploy_light.svg#only-light)
 
 ### Inputs
 
@@ -223,6 +245,27 @@ cv_register_detailed_results: false
 cv_workspace_build_timeout: 300
 ```
 
+##### Structured configuration validation
+
+Presence of the same `serial_number` or `system_mac_address` values in structured configuration of multiple EOS devices may lead to the unexpected results (or even network outages) on the CloudVision side due to the possibility of pushing designed configuration of one device to another device.
+
+To eliminate this risk, this role will always raise an error and will terminate its execution before updating CloudVision in the following cases:
+
+- Structured configuration files of two or more targeted devices have the same `serial_number` (values of `system_mac_address` are not important in this case).
+- Structured configuration files of two or more targeted devices have the same `system_mac_address` and at least one of these devices has an unset `serial_number` value.
+
+By default, this role will warn the user about inconsistencies in the structured configuration files in the following case:
+
+- Structured configuration files of two or more targeted devices have the same `system_mac_address` but unique `serial_number` values.
+
+Having duplicate `system_mac_address` but unique `serial_number` will not lead to unexpected results on CloudVision as the `serial_number` takes precedence.
+
+To force an error to always be raised in case of duplicate `system_mac_address`, set the `cv_strict_system_mac_address` to `true`.
+
+```yaml
+cv_strict_system_mac_address: true
+```
+
 #### Role default input directories
 
 The EOS device configurations and AVD structured configurations are read from files generated by `arista.avd.eos_designs` and `arista.avd.eos_cli_config_gen` roles.
@@ -231,10 +274,31 @@ The directories are configured with the same variables as for the other AVD role
 
 ```yaml
 --8<--
-roles/cv_deploy/defaults/main/directories.yml
+ansible_collections/arista/avd/roles/cv_deploy/defaults/main/directories.yml
 --8<--
 ```
 
+## Steps to create service accounts on CloudVision
+
+1. Go to Settings and Tools --> Access Control --> Service Accounts --> click `+ New Service Account`
+
+```text
+Account name: AVD
+Description: "Automation with AVD"
+Give a description under "Generated Service Account Token"
+Specify the "valid until" date.
+Make sure to copy the generated password. You only get view it once.
+Click "Save" to exit the dialogue box.
+```
+
+![Figure: 1](../../../../../docs/_media/serviceaccount1.png)
+![Figure: 2](../../../../../docs/_media/serviceaccount2.png)
+![Figure: 3](../../../../../docs/_media/serviceaccount3.png)
+
+!!! note
+    The name of the service account must match a username configured to be authorized on
+    EOS, otherwise device interactive API calls might fail due to authorization denial.
+
 ## License
 
-Project is published under [Apache 2.0 License](../../LICENSE)
+Project is published under [Apache 2.0 License](https://github.com/aristanetworks/avd/blob/devel/LICENSE)

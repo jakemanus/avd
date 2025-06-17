@@ -1,0 +1,73 @@
+{#
+ Copyright (c) 2023-2025 Arista Networks, Inc.
+ Use of this source code is governed by the Apache License 2.0
+ that can be found in the LICENSE file.
+#}
+{# doc - management interfaces #}
+{% if management_interfaces is arista.avd.defined %}
+
+### Management Interfaces
+
+#### Management Interfaces Summary
+
+##### IPv4
+
+| Management Interface | Description | Type | VRF | IP Address | Gateway |
+| -------------------- | ----------- | ---- | --- | ---------- | ------- |
+{%     for management_interface in management_interfaces | arista.avd.natural_sort('name') %}
+{%         set vrf = management_interface.vrf | arista.avd.default('default') %}
+{%         set description = management_interface.description | arista.avd.default('-') %}
+{%         set ip = management_interface.ip_address | arista.avd.default('-') %}
+{%         set ip_gateway = management_interface.gateway | arista.avd.default('-') %}
+{%         set int_type = management_interface.type | arista.avd.default('oob') %}
+| {{ management_interface.name }} | {{ description }} | {{ int_type }} | {{ vrf }} | {{ ip }} | {{ ip_gateway }} |
+{%     endfor %}
+
+##### IPv6
+
+| Management Interface | Description | Type | VRF | IPv6 Address | IPv6 Gateway |
+| -------------------- | ----------- | ---- | --- | ------------ | ------------ |
+{%     for management_interface in management_interfaces | arista.avd.natural_sort('name') %}
+{%         set description = management_interface.description | arista.avd.default('-') %}
+{%         set vrf = management_interface.vrf | arista.avd.default('default') %}
+{%         set ipv6 = management_interface.ipv6_address | arista.avd.default('-') %}
+{%         set ipv6_gateway = management_interface.ipv6_gateway | arista.avd.default('-') %}
+{%         set int_type = management_interface.type | arista.avd.default('oob') %}
+| {{ management_interface.name }} | {{ description }} | {{ int_type }} | {{ vrf }} | {{ ipv6 }} | {{ ipv6_gateway }} |
+{%     endfor %}
+{%     if management_interfaces | arista.avd.default([]) | selectattr('redundancy','arista.avd.defined') | list %}
+
+##### Interface Redundancy
+{%         for mgmt_intf in management_interfaces | selectattr('redundancy', 'arista.avd.defined') | arista.avd.natural_sort('name') %}
+
+###### {{mgmt_intf.name}}
+
+| Settings | Value |
+| -------- | ----- |
+{%             if mgmt_intf.redundancy.fallback_delay is arista.avd.defined %}
+| Fallback Delay | {{ mgmt_intf.redundancy.fallback_delay }} |
+{%             endif %}
+{%             if mgmt_intf.redundancy.monitor.link_state is arista.avd.defined %}
+| Monitor Link State | {{ mgmt_intf.redundancy.monitor.link_state }} |
+{%             elif mgmt_intf.redundancy.monitor.neighbor is arista.avd.defined %}
+| Monitor Neighbor IPv6 Address | {{ mgmt_intf.redundancy.monitor.neighbor.ipv6_address }} |
+| Monitor Neighbor Interval | {{ mgmt_intf.redundancy.monitor.neighbor.interval | arista.avd.default("-") }} |
+| Monitor Neighbor Multiplier | {{ mgmt_intf.redundancy.monitor.neighbor.multiplier | arista.avd.default("-") }} |
+{%             endif %}
+{%             if mgmt_intf.redundancy.supervisor_1 is arista.avd.defined %}
+| Supervisor 1 Primary Interface | {{ mgmt_intf.redundancy.supervisor_1.primary_management_interface }} |
+| Supervisor 1 Backup Interfaces | {{ ", ".join(mgmt_intf.redundancy.supervisor_1.backup_management_interfaces) }} |
+{%             endif %}
+{%             if mgmt_intf.redundancy.supervisor_2 is arista.avd.defined %}
+| Supervisor 2 Primary Interface | {{ mgmt_intf.redundancy.supervisor_2.primary_management_interface }} |
+| Supervisor 2 Backup Interfaces | {{ ", ".join(mgmt_intf.redundancy.supervisor_2.backup_management_interfaces) }} |
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+
+#### Management Interfaces Device Configuration
+
+```eos
+{%     include 'eos/management-interfaces.j2' %}
+```
+{% endif %}
